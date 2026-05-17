@@ -1,0 +1,2971 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gpt2codex — Session Format Converter</title>
+    <meta name="theme-color" content="#0F766E" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" sizes="any" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fafaf9;
+        --surface: #ffffff;
+        --surface-soft: #f5f5f4;
+        --border: #e7e5e4;
+        --border-strong: #d6d3d1;
+        --text: #1c1917;
+        --text-muted: #57534e;
+        --text-subtle: #78716c;
+
+        --accent: #0f766e;
+        --accent-strong: #115e59;
+        --accent-soft: #f0fdfa;
+        --accent-soft-hover: #ccfbf1;
+
+        --success: #16a34a;
+        --success-soft: #f0fdf4;
+        --warning: #ca8a04;
+        --warning-soft: #fefce8;
+        --danger: #dc2626;
+        --danger-soft: #fef2f2;
+
+        --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+        --shadow-md: 0 6px 16px rgba(28, 25, 23, 0.06);
+        --shadow-lg: 0 18px 40px rgba(28, 25, 23, 0.08);
+        --shadow-focus: 0 0 0 3px rgba(15, 118, 110, 0.18);
+
+        --radius-sm: 6px;
+        --radius: 10px;
+        --radius-lg: 14px;
+        --radius-pill: 999px;
+
+        --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Noto Sans SC", sans-serif;
+        --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+        --dur-fast: 140ms;
+        --dur-base: 220ms;
+        --dur-slow: 320ms;
+        --easing: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        font-size: 15px;
+        line-height: 1.55;
+        color: var(--text);
+        background: var(--bg);
+        background-image:
+          radial-gradient(ellipse 80% 60% at 20% 0%, rgba(15, 118, 110, 0.04), transparent 60%),
+          radial-gradient(ellipse 60% 50% at 100% 100%, rgba(15, 118, 110, 0.03), transparent 50%);
+        background-attachment: fixed;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+
+      button {
+        border: 0;
+        background: none;
+        cursor: pointer;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+        transition: color var(--dur-base) var(--easing);
+      }
+
+      a:hover {
+        color: var(--accent-strong);
+      }
+
+      ::selection {
+        background: var(--accent-soft-hover);
+        color: var(--accent-strong);
+      }
+
+      /* ------------------- Layout ------------------- */
+
+      .app {
+        width: min(1240px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0 56px;
+      }
+
+      /* ------------------- Header ------------------- */
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 0 20px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+      }
+
+      .brand:hover {
+        color: var(--text);
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-sm);
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #fff;
+        box-shadow: 0 6px 18px rgba(15, 118, 110, 0.28);
+      }
+
+      .brand-mark svg {
+        width: 20px;
+        height: 20px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .brand-text {
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .brand-tag {
+        font-family: var(--font-mono);
+        font-size: 0.74rem;
+        color: var(--text-subtle);
+        margin-left: 4px;
+        padding: 2px 6px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .icon-link {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        transition: background var(--dur-base) var(--easing), color var(--dur-base) var(--easing);
+      }
+
+      .icon-link:hover {
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      .icon-link svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+      }
+
+      /* ------------------- Intro / Hero ------------------- */
+
+      .intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+        grid-template-rows: auto 1fr;
+        column-gap: 24px;
+        row-gap: 0;
+        align-items: start;
+        margin-bottom: 14px;
+      }
+
+      .intro-text {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .intro-title {
+        margin: 0 0 8px;
+        font-size: clamp(1.75rem, 3vw, 2.4rem);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+      }
+
+      .intro-subtitle {
+        margin: 0;
+        max-width: 640px;
+        color: var(--text-muted);
+        font-size: 1rem;
+      }
+
+      .intro-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 14px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-pill);
+        background: var(--surface);
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+
+      .chip-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--success);
+      }
+
+      /* ------------------- Compat card ------------------- */
+
+      .compat-card {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        position: relative;
+        z-index: 2;
+        margin-block: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        transition: border-color var(--dur-base) var(--easing), box-shadow var(--dur-base) var(--easing);
+      }
+
+      .compat-card:hover {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-md);
+      }
+
+      .compat-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .compat-mark {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .compat-mark svg {
+        width: 13px;
+        height: 13px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .compat-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+      }
+
+      .compat-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .compat-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .compat-item-icon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+      }
+
+      .compat-item-icon svg {
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .compat-ok .compat-item-icon {
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .compat-no .compat-item-icon {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .compat-item-body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .compat-item-body strong {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .compat-item-tag {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--text-subtle);
+        white-space: nowrap;
+      }
+
+      .compat-no .compat-item-body strong {
+        color: var(--text-muted);
+      }
+
+      .compat-note {
+        margin: 0;
+        padding: 9px 12px;
+        background: var(--warning-soft);
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        line-height: 1.55;
+        color: #713f12;
+        border-left: 3px solid var(--warning);
+      }
+
+      /* ------------------- Toolbar (format pills) ------------------- */
+
+      .toolbar {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        align-self: end;
+        position: relative;
+        z-index: 1;
+        margin-bottom: 0;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .format-pills {
+        position: relative;
+        display: inline-flex;
+        gap: 6px;
+        align-items: stretch;
+      }
+
+      .pill {
+        position: relative;
+        padding: 10px 16px 12px;
+        margin-bottom: -1px;
+        color: var(--text-muted);
+        font-size: 0.92rem;
+        font-weight: 600;
+        letter-spacing: -0.005em;
+        border-bottom: 2px solid transparent;
+        transition: color var(--dur-base) var(--easing);
+        white-space: nowrap;
+      }
+
+      .pill:hover {
+        color: var(--text);
+      }
+
+      .pill[aria-pressed="true"] {
+        color: var(--accent);
+      }
+
+      .pill-indicator {
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        height: 2px;
+        width: 0;
+        background: var(--accent);
+        transition: transform var(--dur-slow) var(--easing), width var(--dur-slow) var(--easing);
+        pointer-events: none;
+        border-radius: 1px;
+      }
+
+      .pill:focus-visible {
+        outline: none;
+        background: var(--accent-soft);
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      }
+
+      /* ------------------- Config row ------------------- */
+
+      .config {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-end;
+        margin-bottom: 18px;
+        padding: 16px 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 180px;
+      }
+
+      .field-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 0.01em;
+      }
+
+      .field input {
+        padding: 9px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        font-size: 0.92rem;
+        transition: border-color var(--dur-base) var(--easing), box-shadow var(--dur-base) var(--easing);
+      }
+
+      .field input:hover {
+        border-color: var(--border-strong);
+      }
+
+      .field input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: var(--shadow-focus);
+      }
+
+      .field-hint {
+        margin-left: auto;
+        font-size: 0.8rem;
+        color: var(--text-subtle);
+        max-width: 320px;
+        line-height: 1.45;
+      }
+
+      /* ------------------- Workspace ------------------- */
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .pane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color var(--dur-base) var(--easing), box-shadow var(--dur-base) var(--easing);
+      }
+
+      .pane:hover {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-md);
+      }
+
+      .pane-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .pane-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .pane-title-mark {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      .pane-format-label {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .pane-actions {
+        display: flex;
+        gap: 4px;
+      }
+
+      .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 11px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        border-radius: var(--radius-sm);
+        transition: background var(--dur-base) var(--easing), color var(--dur-base) var(--easing);
+      }
+
+      .icon-btn:hover:not(:disabled) {
+        background: var(--surface-soft);
+        color: var(--text);
+      }
+
+      .icon-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .icon-btn svg {
+        width: 15px;
+        height: 15px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: 0 0 auto;
+      }
+
+      .icon-btn.is-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .icon-btn.is-primary:hover:not(:disabled) {
+        background: var(--accent-strong);
+        color: #fff;
+      }
+
+      .icon-btn.is-primary:disabled {
+        background: var(--surface-soft);
+        color: var(--text-subtle);
+      }
+
+      .icon-btn.is-copied {
+        color: var(--success);
+      }
+
+      a.icon-btn {
+        text-decoration: none;
+      }
+
+      .icon-btn-link {
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .icon-btn-link:hover {
+        background: var(--accent-soft-hover);
+        color: var(--accent-strong);
+      }
+
+      /* ------------------- Textarea ------------------- */
+
+      .pane-body {
+        position: relative;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .textarea {
+        display: block;
+        width: 100%;
+        padding: 16px 18px;
+        border: 0;
+        background: transparent;
+        font-family: var(--font-mono);
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: var(--text);
+        resize: vertical;
+        min-height: 380px;
+        white-space: pre;
+      }
+
+      .textarea:focus {
+        outline: none;
+      }
+
+      .textarea::placeholder {
+        color: var(--text-subtle);
+      }
+
+      .textarea.has-error {
+        background: var(--danger-soft);
+      }
+
+      .textarea-shell {
+        position: relative;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .drop-zone {
+        position: absolute;
+        inset: 12px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+        border: 2px dashed var(--accent);
+        border-radius: var(--radius);
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-weight: 600;
+        pointer-events: none;
+        z-index: 5;
+        animation: dropZoneIn var(--dur-base) var(--easing);
+      }
+
+      .drop-zone.active {
+        display: flex;
+      }
+
+      .drop-zone svg {
+        width: 36px;
+        height: 36px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .drop-zone-sub {
+        font-size: 0.82rem;
+        font-weight: 400;
+        opacity: 0.8;
+      }
+
+      @keyframes dropZoneIn {
+        from {
+          opacity: 0;
+          transform: scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* ------------------- Status bar ------------------- */
+
+      .pane-foot {
+        padding: 10px 16px;
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+        min-height: 42px;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        min-height: 22px;
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--text-subtle);
+        flex: 0 0 auto;
+      }
+
+      .status.is-ok .status-dot {
+        background: var(--success);
+      }
+
+      .status.is-warning .status-dot {
+        background: var(--warning);
+      }
+
+      .status.is-error .status-dot {
+        background: var(--danger);
+      }
+
+      .status.is-ok {
+        color: var(--success);
+      }
+
+      .status.is-warning {
+        color: var(--warning);
+      }
+
+      .status.is-error {
+        color: var(--danger);
+      }
+
+      .status-rich {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+
+      .status-rich-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+      }
+
+      .status-rich-list {
+        display: grid;
+        gap: 6px;
+        margin-top: 2px;
+      }
+
+      .status-rich-item {
+        padding: 8px 10px;
+        background: var(--surface-soft);
+        border-radius: var(--radius-sm);
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+
+      .status-rich-item code {
+        font-family: var(--font-mono);
+        font-size: 0.92em;
+        padding: 1px 5px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+      }
+
+      .json-snippet {
+        display: block;
+        margin-top: 6px;
+        padding: 8px 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        white-space: pre;
+        overflow-x: auto;
+      }
+
+      /* ------------------- Stats ------------------- */
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        padding: 18px 20px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        transition: border-color var(--dur-base) var(--easing), box-shadow var(--dur-base) var(--easing);
+      }
+
+      .stat-card:hover {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .stat-value {
+        font-family: var(--font-mono);
+        font-size: 1.75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .stat-label {
+        margin-top: 4px;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 500;
+      }
+
+      .stat-card.stat-format .stat-value {
+        font-family: var(--font-sans);
+        font-size: 1.35rem;
+        letter-spacing: -0.01em;
+      }
+
+      .stat-card.stat-warn .stat-value {
+        color: var(--warning);
+      }
+
+      .stat-card.stat-zero .stat-value {
+        color: var(--text-subtle);
+      }
+
+      /* ------------------- Accounts grid ------------------- */
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .section-title-count {
+        padding: 1px 8px;
+        font-size: 0.72rem;
+        font-family: var(--font-mono);
+        color: var(--text-muted);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-pill);
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .accounts {
+        margin-bottom: 24px;
+      }
+
+      .accounts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 10px;
+      }
+
+      .account-card {
+        padding: 14px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        transition: border-color var(--dur-base) var(--easing), box-shadow var(--dur-base) var(--easing),
+          transform var(--dur-base) var(--easing);
+        cursor: default;
+      }
+
+      .account-card:hover {
+        border-color: var(--accent);
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-1px);
+      }
+
+      .account-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+
+      .account-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-radius: var(--radius-sm);
+      }
+
+      .account-time {
+        font-size: 0.74rem;
+        color: var(--text-subtle);
+        font-family: var(--font-mono);
+      }
+
+      .account-name {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-bottom: 4px;
+      }
+
+      .account-meta {
+        display: flex;
+        gap: 8px;
+        font-size: 0.78rem;
+        color: var(--text-subtle);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .accounts-empty {
+        padding: 28px 16px;
+        text-align: center;
+        color: var(--text-subtle);
+        background: var(--surface);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius);
+        font-size: 0.92rem;
+      }
+
+      /* ------------------- Issues ------------------- */
+
+      .issues-block {
+        margin-bottom: 24px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      .issues-block[open] {
+        border-color: var(--border-strong);
+      }
+
+      .issues-summary {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        cursor: pointer;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text);
+        user-select: none;
+        list-style: none;
+        transition: background var(--dur-base) var(--easing);
+      }
+
+      .issues-summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .issues-summary:hover {
+        background: var(--surface-soft);
+      }
+
+      .issues-chevron {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        transition: transform var(--dur-base) var(--easing);
+      }
+
+      .issues-block[open] .issues-chevron {
+        transform: rotate(90deg);
+      }
+
+      .issues-count {
+        margin-left: auto;
+        padding: 1px 8px;
+        font-size: 0.74rem;
+        font-family: var(--font-mono);
+        color: var(--warning);
+        background: var(--warning-soft);
+        border-radius: var(--radius-pill);
+      }
+
+      .issues-list {
+        padding: 0 16px 14px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .issue-row {
+        padding: 10px 12px;
+        background: var(--warning-soft);
+        border: 1px solid rgba(202, 138, 4, 0.18);
+        border-radius: var(--radius-sm);
+        font-size: 0.82rem;
+        color: #713f12;
+        line-height: 1.5;
+      }
+
+      .issue-row[data-severity="error"] {
+        background: var(--danger-soft);
+        border-color: rgba(220, 38, 38, 0.18);
+        color: #7f1d1d;
+      }
+
+      .issue-row code {
+        font-family: var(--font-mono);
+        font-size: 0.92em;
+        padding: 1px 5px;
+        background: rgba(255, 255, 255, 0.7);
+        border-radius: 3px;
+      }
+
+      .issue-source {
+        display: inline-block;
+        margin-right: 6px;
+        font-family: var(--font-mono);
+        color: var(--text-subtle);
+        font-size: 0.86em;
+      }
+
+      /* ------------------- Hint card ------------------- */
+
+      .hint {
+        display: flex;
+        gap: 14px;
+        padding: 16px 18px;
+        background: var(--accent-soft);
+        border: 1px solid rgba(15, 118, 110, 0.22);
+        border-radius: var(--radius);
+        margin-bottom: 28px;
+      }
+
+      .hint-icon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .hint-icon svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .hint-body {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .hint-title {
+        margin: 0 0 4px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--accent-strong);
+      }
+
+      .hint-text {
+        margin: 0;
+        font-size: 0.88rem;
+        line-height: 1.55;
+        color: #134e4a;
+      }
+
+      .hint-text a {
+        font-family: var(--font-mono);
+        font-weight: 500;
+        color: var(--accent-strong);
+        font-size: 0.96em;
+        word-break: break-all;
+      }
+
+      .hint-warning {
+        display: inline-block;
+        margin-top: 6px;
+        padding: 3px 10px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: var(--radius-pill);
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #9f1239;
+      }
+
+      /* ------------------- Footer ------------------- */
+
+      .footer {
+        margin-top: 8px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        font-size: 0.82rem;
+        color: var(--text-subtle);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .footer a {
+        color: var(--text-muted);
+      }
+
+      .footer a:hover {
+        color: var(--accent);
+      }
+
+      /* ------------------- Toast ------------------- */
+
+      .toast-container {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        pointer-events: none;
+      }
+
+      .toast {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: var(--text);
+        color: var(--surface);
+        border-radius: var(--radius-pill);
+        font-size: 0.86rem;
+        font-weight: 500;
+        box-shadow: var(--shadow-lg);
+        pointer-events: auto;
+        animation: toastIn var(--dur-slow) var(--easing);
+      }
+
+      .toast.toast-success {
+        background: var(--success);
+      }
+
+      .toast.toast-error {
+        background: var(--danger);
+      }
+
+      .toast svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .toast.fade-out {
+        animation: toastOut var(--dur-base) var(--easing) forwards;
+      }
+
+      @keyframes toastIn {
+        from {
+          opacity: 0;
+          transform: translateY(16px) scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes toastOut {
+        to {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+
+      /* ------------------- Responsive ------------------- */
+
+      @media (max-width: 920px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .intro {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto auto;
+          row-gap: 14px;
+        }
+
+        .intro-text {
+          grid-column: 1;
+          grid-row: 1;
+        }
+
+        .compat-card {
+          grid-column: 1;
+          grid-row: 2;
+          margin-block: 0;
+        }
+
+        .toolbar {
+          grid-column: 1;
+          grid-row: 3;
+          padding-bottom: 0;
+        }
+        .stats {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .intro-title {
+          font-size: 1.8rem;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .app {
+          width: min(calc(100vw - 20px), 1240px);
+          padding-top: 16px;
+        }
+
+        .header {
+          padding-bottom: 14px;
+          margin-bottom: 18px;
+        }
+
+        .brand-tag {
+          display: none;
+        }
+
+        .format-pills {
+          width: 100%;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .format-pills::-webkit-scrollbar {
+          display: none;
+        }
+
+        .pill {
+          padding: 10px 12px 12px;
+          font-size: 0.86rem;
+        }
+
+        .config {
+          padding: 14px;
+        }
+
+        .field {
+          flex: 1 1 100%;
+          min-width: 0;
+        }
+
+        .field-hint {
+          margin-left: 0;
+          max-width: none;
+        }
+
+        .pane-head {
+          padding: 12px 14px;
+          flex-wrap: wrap;
+        }
+
+        .stats {
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+
+        .stat-card.stat-format {
+          grid-column: span 2;
+        }
+
+        .textarea {
+          font-size: 0.78rem;
+          min-height: 280px;
+        }
+      }
+
+      /* ------------------- Reduced motion ------------------- */
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- ============ HEADER ============ -->
+      <header class="header">
+        <a class="brand" href="#">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M16 6 C13 4 10 4 8 5.5 C5 7 4 9.5 4 12 C4 14.5 5 17 8 18.5 C10 20 13 20 16 18"
+                stroke-width="2.6"
+              />
+              <path d="M13 8.5 L20.5 12 L13 15.5 Z" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <span class="brand-text">gpt2codex</span>
+        </a>
+        <div class="header-actions">
+          <a
+            class="icon-link"
+            href="https://github.com/Txy-Sky/gpt2codex"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="GitHub 仓库"
+            title="GitHub 仓库"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.24c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23A11.5 11.5 0 0 1 12 5.78c1.02 0 2.05.14 3.01.41 2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.82 1.1.82 2.22v3.3c0 .32.22.7.83.58A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z" />
+            </svg>
+          </a>
+        </div>
+      </header>
+
+      <!-- ============ INTRO ============ -->
+      <section class="intro">
+        <div class="intro-text">
+          <h1 class="intro-title">Session Format Converter</h1>
+          <p class="intro-subtitle">
+            ChatGPT Web Session 与 sub2api / Codex / CPA / Cockpit / 9router 五种 OAuth 配置格式互转，浏览器本地解析。
+          </p>
+          <div class="intro-chips" aria-label="处理方式">
+            <span class="chip"><span class="chip-dot" aria-hidden="true"></span>本地解析</span>
+            <span class="chip"><span class="chip-dot" aria-hidden="true"></span>不上传 Token</span>
+            <span class="chip"><span class="chip-dot" aria-hidden="true"></span>不写入存储</span>
+          </div>
+        </div>
+        <aside class="compat-card" aria-label="账号兼容性">
+          <div class="compat-head">
+            <span class="compat-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+            </span>
+            <span class="compat-title">账号兼容性</span>
+          </div>
+          <ul class="compat-list">
+            <li class="compat-item compat-ok">
+              <span class="compat-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>
+              </span>
+              <div class="compat-item-body">
+                <strong>Plus / Pro / Team</strong>
+                <span class="compat-item-tag">已订阅账号</span>
+              </div>
+            </li>
+            <li class="compat-item compat-no">
+              <span class="compat-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </span>
+              <div class="compat-item-body">
+                <strong>Free</strong>
+                <span class="compat-item-tag">无 GPT 调用权限</span>
+              </div>
+            </li>
+          </ul>
+          <p class="compat-note">Free 账号即便完成转换，下游网关调用 GPT 模型时仍会因权限不足而失败。</p>
+        </aside>
+        <section class="toolbar" aria-label="输出格式">
+          <div class="format-pills" role="tablist">
+            <button class="pill" type="button" role="tab" data-format="sub2api" aria-pressed="true">sub2api</button>
+            <button class="pill" type="button" role="tab" data-format="codex" aria-pressed="false">Codex</button>
+            <button class="pill" type="button" role="tab" data-format="cpa" aria-pressed="false">CPA</button>
+            <button class="pill" type="button" role="tab" data-format="cockpit" aria-pressed="false">Cockpit</button>
+            <button class="pill" type="button" role="tab" data-format="9router" aria-pressed="false">9router</button>
+            <span class="pill-indicator" aria-hidden="true"></span>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============ CONFIG ============ -->
+      <section class="config" id="config-row" aria-label="账号字段配置">
+        <div class="field">
+          <label class="field-label" for="plan-type">Plan Type</label>
+          <input id="plan-type" type="text" value="plus" placeholder="plus / pro / team" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="name-prefix">Name Prefix</label>
+          <input id="name-prefix" type="text" value="[testplus]" placeholder="名称前缀" autocomplete="off" />
+        </div>
+        <p class="field-hint">
+          仅 sub2api / Codex 格式使用。Plan Type 覆盖 JWT 提取值；Name Prefix 拼接到 sub2api 的 <code>name</code> 字段。
+        </p>
+      </section>
+
+      <!-- ============ WORKSPACE ============ -->
+      <main class="workspace">
+        <!-- INPUT -->
+        <section class="pane" aria-labelledby="input-title">
+          <header class="pane-head">
+            <h2 class="pane-title" id="input-title">
+              <span class="pane-title-mark" aria-hidden="true"></span>输入
+            </h2>
+            <div class="pane-actions">
+              <a
+                class="icon-btn icon-btn-link"
+                id="get-session"
+                href="https://chatgpt.com/api/auth/session"
+                target="_blank"
+                rel="noreferrer"
+                title="在浏览器打开 ChatGPT Session 端点（需先登录 chatgpt.com）"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <path d="M15 3h6v6" />
+                  <path d="M10 14L21 3" />
+                </svg>
+                <span>获取 Session</span>
+              </a>
+              <button class="icon-btn" id="pick-files" type="button" title="选择文件">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M14 3v5h5" />
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2z" />
+                </svg>
+                <span>文件</span>
+              </button>
+              <button class="icon-btn" id="pick-folder" type="button" title="选择文件夹">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+                </svg>
+                <span>目录</span>
+              </button>
+              <button class="icon-btn" id="load-example" type="button" title="填入示例">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+                </svg>
+                <span>示例</span>
+              </button>
+              <button class="icon-btn" id="clear-input" type="button" title="清空">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                </svg>
+              </button>
+            </div>
+          </header>
+          <div class="pane-body">
+            <div class="textarea-shell" id="textarea-shell">
+              <textarea
+                id="session-input"
+                class="textarea"
+                spellcheck="false"
+                placeholder='{"user":{"email":"mark@example.com"},"expires":"2026-08-06T14:29:36.155Z","account":{"id":"...","planType":"plus"},"accessToken":"...","sessionToken":"..."}
+
+或粘贴任意 sub2api / Codex / CPA / Cockpit / 9router 配置进行格式互转'
+              ></textarea>
+              <div class="drop-zone" id="drag-overlay" aria-hidden="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="M17 8l-5-5-5 5" />
+                  <path d="M12 3v12" />
+                </svg>
+                <strong>释放 JSON 以加载</strong>
+                <span class="drop-zone-sub">支持多个文件 · 自动识别 5 种格式</span>
+              </div>
+            </div>
+          </div>
+          <div class="pane-foot">
+            <div class="status" id="input-status">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span>等待输入</span>
+            </div>
+          </div>
+          <input class="hidden" id="file-input" type="file" accept=".json,application/json" multiple />
+          <input class="hidden" id="folder-input" type="file" webkitdirectory directory multiple />
+        </section>
+
+        <!-- OUTPUT -->
+        <section class="pane" aria-labelledby="output-title">
+          <header class="pane-head">
+            <h2 class="pane-title" id="output-title">
+              <span class="pane-title-mark" aria-hidden="true"></span>输出
+              <span class="pane-format-label" id="output-format-label">sub2api</span>
+            </h2>
+            <div class="pane-actions">
+              <button class="icon-btn" id="copy-output" type="button" disabled title="复制到剪贴板">
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-copy">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-check" style="display:none">
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+                <span class="icon-btn-label">复制</span>
+              </button>
+              <button class="icon-btn is-primary" id="download-output" type="button" disabled title="下载 JSON">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="M7 10l5 5 5-5" />
+                  <path d="M12 15V3" />
+                </svg>
+                <span>下载</span>
+              </button>
+            </div>
+          </header>
+          <div class="pane-body">
+            <textarea
+              id="output"
+              class="textarea"
+              readonly
+              spellcheck="false"
+              placeholder="转换后的 JSON 会显示在这里"
+            ></textarea>
+          </div>
+          <div class="pane-foot">
+            <div class="status" id="output-status">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span>暂无输出</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ============ STATS ============ -->
+      <section class="stats" aria-label="转换统计">
+        <div class="stat-card stat-zero" id="stat-count-card">
+          <div class="stat-value" id="stat-count">0</div>
+          <div class="stat-label">账号</div>
+        </div>
+        <div class="stat-card stat-format">
+          <div class="stat-value" id="stat-format">sub2api</div>
+          <div class="stat-label">输出格式</div>
+        </div>
+        <div class="stat-card stat-zero" id="stat-errors-card">
+          <div class="stat-value" id="stat-errors">0</div>
+          <div class="stat-label">问题</div>
+        </div>
+      </section>
+
+      <!-- ============ ACCOUNTS ============ -->
+      <section class="accounts" id="accounts-section" hidden>
+        <h3 class="section-title">
+          账号预览
+          <span class="section-title-count" id="accounts-count">0</span>
+        </h3>
+        <div class="accounts-grid" id="accounts-grid"></div>
+      </section>
+
+      <!-- ============ ISSUES ============ -->
+      <details class="issues-block" id="issues-block" hidden>
+        <summary class="issues-summary">
+          <svg class="issues-chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+          <span>诊断信息</span>
+          <span class="issues-count" id="issues-count">0</span>
+        </summary>
+        <div class="issues-list" id="issues"></div>
+      </details>
+
+      <!-- ============ HINT ============ -->
+      <section class="hint">
+        <div class="hint-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8h.01M11 12h1v4h1" />
+          </svg>
+        </div>
+        <div class="hint-body">
+          <h3 class="hint-title">Session 数据从这里获取</h3>
+          <p class="hint-text">
+            浏览器登录 ChatGPT 后访问
+            <a href="https://chatgpt.com/api/auth/session" target="_blank" rel="noreferrer">chatgpt.com/api/auth/session</a>
+            ，复制整段 JSON 粘贴到上方输入框。
+            <span class="hint-warning">这段 JSON 等同登录凭证，不要发给他人</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ FOOTER ============ -->
+      <footer class="footer">
+        <span>gpt2codex · 本地工具 · 数据不离开浏览器</span>
+        <span>
+          <a href="https://github.com/Txy-Sky/gpt2codex" target="_blank" rel="noreferrer">源代码</a>
+        </span>
+      </footer>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+      (() => {
+        const DEFAULT_MODEL_MAPPING = {
+          "gpt-5.1": "gpt-5.1",
+          "gpt-5.1-codex": "gpt-5.1-codex",
+          "gpt-5.1-codex-max": "gpt-5.1-codex-max",
+          "gpt-5.1-codex-mini": "gpt-5.1-codex-mini",
+          "gpt-5.2": "gpt-5.2",
+          "gpt-5.2-codex": "gpt-5.2-codex",
+          "gpt-5.3": "gpt-5.3",
+          "gpt-5.3-codex": "gpt-5.3-codex",
+          "gpt-5.4": "gpt-5.4",
+        };
+
+        const OUTPUT_LABELS = {
+          sub2api: "sub2api",
+          codex: "Codex",
+          cpa: "CPA",
+          cockpit: "Cockpit",
+          "9router": "9router",
+        };
+
+        const state = {
+          format: "sub2api",
+          sessions: [],
+          converted: [],
+          skipped: [],
+          outputText: "",
+          planType: "plus",
+          namePrefix: "[testplus]",
+        };
+
+        const elements = {
+          accountsGrid: document.querySelector("#accounts-grid"),
+          accountsSection: document.querySelector("#accounts-section"),
+          accountsCount: document.querySelector("#accounts-count"),
+          clearInput: document.querySelector("#clear-input"),
+          configRow: document.querySelector("#config-row"),
+          copyOutput: document.querySelector("#copy-output"),
+          downloadOutput: document.querySelector("#download-output"),
+          dragOverlay: document.querySelector("#drag-overlay"),
+          fileInput: document.querySelector("#file-input"),
+          folderInput: document.querySelector("#folder-input"),
+          formatButtons: Array.from(document.querySelectorAll("[data-format]")),
+          input: document.querySelector("#session-input"),
+          inputStatus: document.querySelector("#input-status"),
+          issues: document.querySelector("#issues"),
+          issuesBlock: document.querySelector("#issues-block"),
+          issuesCount: document.querySelector("#issues-count"),
+          loadExample: document.querySelector("#load-example"),
+          namePrefixInput: document.querySelector("#name-prefix"),
+          output: document.querySelector("#output"),
+          outputFormatLabel: document.querySelector("#output-format-label"),
+          outputStatus: document.querySelector("#output-status"),
+          pickFiles: document.querySelector("#pick-files"),
+          pickFolder: document.querySelector("#pick-folder"),
+          pillIndicator: document.querySelector(".pill-indicator"),
+          planTypeInput: document.querySelector("#plan-type"),
+          statCount: document.querySelector("#stat-count"),
+          statCountCard: document.querySelector("#stat-count-card"),
+          statErrors: document.querySelector("#stat-errors"),
+          statErrorsCard: document.querySelector("#stat-errors-card"),
+          statFormat: document.querySelector("#stat-format"),
+          textareaShell: document.querySelector("#textarea-shell"),
+          toastContainer: document.querySelector("#toast-container"),
+        };
+
+        const exampleSession = {
+          user: { id: "user-example", email: "mark@example.com" },
+          expires: "2026-08-06T14:29:36.155Z",
+          account: { id: "00000000-0000-4000-9000-000000000000", planType: "plus" },
+          accessToken: "paste-real-access-token-here",
+          sessionToken: "paste-real-session-token-here",
+          authProvider: "openai",
+        };
+
+        // ============ Helpers ============
+
+        function isPlainObject(value) {
+          return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+        }
+
+        function firstNonEmpty(...values) {
+          for (const value of values) {
+            if (typeof value === "string" && value.trim() !== "") {
+              return value.trim();
+            }
+          }
+          return undefined;
+        }
+
+        function escapeHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        }
+
+        function decodeBase64Url(value) {
+          const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+          const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+          const binary = atob(padded);
+          const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+          return new TextDecoder().decode(bytes);
+        }
+
+        function bytesToBase64Url(bytes) {
+          let binary = "";
+          for (let i = 0; i < bytes.length; i += 0x8000) {
+            binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          }
+          return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+        }
+
+        function encodeBase64UrlJson(value) {
+          return bytesToBase64Url(new TextEncoder().encode(JSON.stringify(value)));
+        }
+
+        function parseJwtPayload(token) {
+          if (typeof token !== "string" || token.trim() === "") return undefined;
+          const segments = token.split(".");
+          if (segments.length < 2) return undefined;
+          try {
+            return JSON.parse(decodeBase64Url(segments[1]));
+          } catch {
+            return undefined;
+          }
+        }
+
+        function getOpenAIAuthSection(payload) {
+          if (!isPlainObject(payload)) return {};
+          const a = payload["https://api.openai.com/auth"];
+          return isPlainObject(a) ? a : {};
+        }
+
+        function getOpenAIProfileSection(payload) {
+          if (!isPlainObject(payload)) return {};
+          const p = payload["https://api.openai.com/profile"];
+          return isPlainObject(p) ? p : {};
+        }
+
+        function normalizeTimestamp(value) {
+          if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+          if (typeof value === "number" && Number.isFinite(value)) {
+            const ms = value > 1e11 ? value : value * 1000;
+            const d = new Date(ms);
+            return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+          }
+          if (typeof value !== "string" || value.trim() === "") return undefined;
+          const d = new Date(value);
+          return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+        }
+
+        function timestampFromUnixSeconds(value) {
+          const n = Number(value);
+          if (!Number.isFinite(n)) return undefined;
+          const d = new Date(n * 1000);
+          return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+        }
+
+        function epochSecondsFromValue(value) {
+          if (value === undefined || value === null || value === "") return 0;
+          const n = Number(value);
+          if (Number.isFinite(n)) return Math.trunc(n > 1e11 ? n / 1000 : n);
+          const p = Date.parse(String(value));
+          return Number.isFinite(p) ? Math.trunc(p / 1000) : 0;
+        }
+
+        function buildSyntheticCodexIdToken(email, accountId, planType, userId, expiresAt) {
+          if (!accountId) return undefined;
+          const now = Math.trunc(Date.now() / 1000);
+          const authInfo = { chatgpt_account_id: accountId };
+          const expires = epochSecondsFromValue(expiresAt) || now + 90 * 24 * 60 * 60;
+          if (planType) authInfo.chatgpt_plan_type = planType;
+          if (userId) {
+            authInfo.chatgpt_user_id = userId;
+            authInfo.user_id = userId;
+          }
+          const payload = { iat: now, exp: expires, "https://api.openai.com/auth": authInfo };
+          if (email) payload.email = email;
+          return `${encodeBase64UrlJson({ alg: "none", typ: "JWT", cpa_synthetic: true })}.${encodeBase64UrlJson(payload)}.`;
+        }
+
+        function getExpiresIn(expiresAt, now = new Date()) {
+          if (!expiresAt) return undefined;
+          const ms = new Date(expiresAt).getTime();
+          if (Number.isNaN(ms)) return undefined;
+          return Math.max(0, Math.floor((ms - now.getTime()) / 1000));
+        }
+
+        function stripUnavailable(value) {
+          if (Array.isArray(value)) return value.map(stripUnavailable).filter((i) => i !== undefined);
+          if (isPlainObject(value)) {
+            const entries = Object.entries(value)
+              .map(([k, v]) => [k, stripUnavailable(v)])
+              .filter(([, v]) => v !== undefined);
+            return entries.length ? Object.fromEntries(entries) : undefined;
+          }
+          if (value === undefined || value === null || value === "") return undefined;
+          return value;
+        }
+
+        function sanitizeFileToken(value, fallback = "chatgpt-session") {
+          const base = firstNonEmpty(value, fallback) || fallback;
+          return (
+            base
+              .replace(/\.[^.]+$/u, "")
+              .replace(/[\\/:*?"<>|]+/g, "-")
+              .replace(/\s+/g, "-")
+              .replace(/-+/g, "-")
+              .replace(/^-+|-+$/g, "")
+              .toLowerCase()
+              .slice(0, 80) || fallback
+          );
+        }
+
+        function getTimestampToken(d = new Date()) {
+          const pad = (v) => String(v).padStart(2, "0");
+          return (
+            `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+            `_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`
+          );
+        }
+
+        function formatDisplayDate(value) {
+          if (!value) return "";
+          const d = new Date(value);
+          if (Number.isNaN(d.getTime())) return value;
+          const pad = (v) => String(v).padStart(2, "0");
+          return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function buildExtra(lastRefreshISO) {
+          const d = new Date(lastRefreshISO);
+          const safe = Number.isNaN(d.getTime()) ? new Date() : d;
+          const week = new Date(safe);
+          week.setDate(week.getDate() + 7);
+          const local = (date) => {
+            const offset = 8 * 60;
+            const ld = new Date(date.getTime() + offset * 60 * 1000);
+            return ld.toISOString().slice(0, 19);
+          };
+          return {
+            codex_5h_reset_after_seconds: 0,
+            codex_5h_reset_at: local(safe),
+            codex_5h_used_percent: 0,
+            codex_5h_window_minutes: 0,
+            codex_7d_reset_after_seconds: 604800,
+            codex_7d_reset_at: local(week),
+            codex_7d_used_percent: 0,
+            codex_7d_window_minutes: 10080,
+            codex_primary_over_secondary_percent: 0,
+            codex_primary_reset_after_seconds: 604800,
+            codex_primary_used_percent: 0,
+            codex_primary_window_minutes: 10080,
+            codex_secondary_reset_after_seconds: 0,
+            codex_secondary_used_percent: 0,
+            codex_secondary_window_minutes: 0,
+            codex_usage_updated_at: local(safe),
+            privacy_mode: "training_off",
+            openai_oauth_responses_websockets_v2_enabled: false,
+            openai_oauth_responses_websockets_v2_mode: "off",
+          };
+        }
+
+        function getLinePreview(content, lineNumber) {
+          const lines = content.split("\n");
+          const idx = Math.max(0, Math.min((lineNumber || 1) - 1, lines.length - 1));
+          const start = Math.max(0, idx - 1);
+          const end = Math.min(lines.length, idx + 2);
+          return lines
+            .slice(start, end)
+            .map((line, off) => {
+              const cur = start + off + 1;
+              const mark = cur === idx + 1 ? ">" : " ";
+              return `${mark} ${String(cur).padStart(3, " ")} | ${line}`;
+            })
+            .join("\n");
+        }
+
+        function validateJSONDetailed(content) {
+          try {
+            JSON.parse(content);
+            return { valid: true };
+          } catch (e) {
+            const msg = e.message || "";
+            const pm = msg.match(/position\s+(\d+)/i) || msg.match(/column\s+(\d+)/i);
+            let pos = pm ? parseInt(pm[1], 10) : null;
+            let line = 1;
+            let col = 1;
+            if (pos !== null) {
+              for (let i = 0; i < pos && i < content.length; i++) {
+                if (content[i] === "\n") {
+                  line++;
+                  col = 1;
+                } else col++;
+              }
+            } else {
+              const lines = content.split("\n");
+              line = lines.length;
+              col = (lines[lines.length - 1] || "").length + 1;
+            }
+            const sug = [];
+            if (
+              /unexpected end/i.test(msg) ||
+              /expected.+after property value/i.test(msg) ||
+              /expected.+'\}'/i.test(msg)
+            ) {
+              sug.push("内容突然结束或缺少分隔符，可能少了右花括号、右方括号、逗号或结尾引号。");
+            }
+            if (
+              /expected double-quoted property name/i.test(msg) ||
+              /expected property name/i.test(msg) ||
+              /expected.+after property name/i.test(msg)
+            ) {
+              sug.push("字段名需要用英文双引号包住，且字段名与值之间用英文冒号 `:` 分隔。");
+            }
+            if (/unexpected token/i.test(msg)) {
+              sug.push("附近出现意外字符，可能多了逗号、用了中文标点（如 ：，“），或字符串未转义换行。");
+            }
+            if (/unterminated|bad string/i.test(msg)) {
+              sug.push("字符串未用双引号完整包住，内部双引号需写成 \\\"。");
+            }
+            if (!sug.length) {
+              sug.push("确认整体是 {...} 或 [...] 结构，字段名与字符串都用英文双引号。");
+            }
+            return {
+              valid: false,
+              error: msg,
+              line,
+              col,
+              position: pos,
+              preview: getLinePreview(content, line),
+              suggestions: sug,
+            };
+          }
+        }
+
+        function inspectJwt(token, label) {
+          if (!token || typeof token !== "string") return `${label} 不能为空。`;
+          const parts = token.split(".");
+          if (parts.length !== 3) return `${label} 不是标准 JWT，应包含 3 段并用英文句点分隔。`;
+          try {
+            decodeBase64Url(parts[1]);
+            return null;
+          } catch {
+            return `${label} 的 payload 无法解析，请确认没有截断或混入空格。`;
+          }
+        }
+
+        function validateTokenFields(record, index, format) {
+          const issues = [];
+          if (!isPlainObject(record)) {
+            issues.push(`第 ${index + 1} 个对象不是 JSON 对象。`);
+            return issues;
+          }
+          const accessToken = firstNonEmpty(
+            record.accessToken,
+            record.access_token,
+            record.token?.accessToken,
+            record.token?.access_token,
+            record.credentials?.accessToken,
+            record.credentials?.access_token,
+          );
+          const email = firstNonEmpty(
+            record.user?.email,
+            record.email,
+            record.credentials?.email,
+            record.providerSpecificData?.email,
+          );
+          const refreshToken = firstNonEmpty(
+            record.refreshToken,
+            record.refresh_token,
+            record.token?.refreshToken,
+            record.token?.refresh_token,
+            record.credentials?.refresh_token,
+          );
+
+          if (!accessToken) {
+            issues.push(`第 ${index + 1} 个：缺少 <code>accessToken / access_token</code>。`);
+          } else {
+            const jwt = inspectJwt(accessToken, `第 ${index + 1} 个 access_token`);
+            if (jwt) issues.push(escapeHtml(jwt));
+          }
+
+          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            issues.push(`第 ${index + 1} 个：email 格式异常 <code>${escapeHtml(email)}</code>。`);
+          }
+
+          ["expires", "expires_at", "expiresAt", "expired"].forEach((field) => {
+            const v = record[field];
+            if (v && Number.isNaN(new Date(v).getTime())) {
+              issues.push(`第 ${index + 1} 个：${field} 不是有效时间 <code>${escapeHtml(String(v))}</code>。`);
+            }
+          });
+
+          if (format === "codex" && accessToken && !refreshToken) {
+            issues.push(
+              `第 ${index + 1} 个：缺少 <code>refresh_token</code>，Codex CLI 自动刷新将失效（ChatGPT Web Session 通常无此字段）。`,
+            );
+          }
+
+          return issues;
+        }
+
+        // ============ Session collection ============
+
+        function collectSessionLikeObjects(value, sourceName = "pasted-json") {
+          const found = [];
+          const visited = new WeakSet();
+
+          function visit(item, path) {
+            if (!isPlainObject(item) && !Array.isArray(item)) return;
+
+            if (isPlainObject(item)) {
+              if (visited.has(item)) return;
+              visited.add(item);
+
+              // Codex auth.json detection
+              if (
+                isPlainObject(item.tokens) &&
+                firstNonEmpty(item.tokens.access_token, item.tokens.accessToken) &&
+                firstNonEmpty(item.tokens.account_id, item.tokens.chatgpt_account_id, item.auth_mode)
+              ) {
+                found.push({
+                  value: {
+                    access_token: firstNonEmpty(item.tokens.access_token, item.tokens.accessToken),
+                    id_token: firstNonEmpty(item.tokens.id_token, item.tokens.idToken),
+                    refresh_token: firstNonEmpty(item.tokens.refresh_token, item.tokens.refreshToken) || "",
+                    account_id: firstNonEmpty(item.tokens.account_id, item.tokens.chatgpt_account_id),
+                    last_refresh: item.last_refresh,
+                  },
+                  sourceName,
+                  path,
+                });
+                return;
+              }
+
+              const token = firstNonEmpty(
+                item.accessToken,
+                item.access_token,
+                item.token?.accessToken,
+                item.token?.access_token,
+                item.credentials?.accessToken,
+                item.credentials?.access_token,
+              );
+              const hasIdentity =
+                isPlainObject(item.user) ||
+                firstNonEmpty(
+                  item.email,
+                  item.name,
+                  item.providerSpecificData?.chatgptAccountId,
+                  item.providerSpecificData?.chatgpt_account_id,
+                  item.id,
+                );
+              if (token && hasIdentity) {
+                found.push({ value: item, sourceName, path });
+                return;
+              }
+
+              for (const [key, child] of Object.entries(item)) {
+                if (key === "accessToken" || key === "access_token" || key === "sessionToken") continue;
+                visit(child, `${path}.${key}`);
+              }
+              return;
+            }
+
+            item.forEach((child, i) => visit(child, `${path}[${i}]`));
+          }
+
+          visit(value, "$");
+          return found;
+        }
+
+        function parseInputDocuments(text) {
+          if (typeof text !== "string" || text.trim() === "") return [];
+          let parsed;
+          try {
+            parsed = JSON.parse(text);
+          } catch (e) {
+            throw new Error(`JSON 解析失败：${e.message}`);
+          }
+          return collectSessionLikeObjects(parsed);
+        }
+
+        // ============ Convert ============
+
+        function convertSession(record, options = {}) {
+          if (!isPlainObject(record)) throw new Error("session 不是 JSON 对象");
+
+          const accessToken = firstNonEmpty(
+            record.accessToken,
+            record.access_token,
+            record.token?.accessToken,
+            record.token?.access_token,
+            record.credentials?.accessToken,
+            record.credentials?.access_token,
+          );
+          if (!accessToken) throw new Error("缺少 accessToken");
+
+          const sessionToken = firstNonEmpty(
+            record.sessionToken,
+            record.session_token,
+            record.token?.sessionToken,
+            record.token?.session_token,
+            record.credentials?.session_token,
+          );
+          const refreshToken = firstNonEmpty(
+            record.refreshToken,
+            record.refresh_token,
+            record.token?.refreshToken,
+            record.token?.refresh_token,
+            record.credentials?.refresh_token,
+          );
+          const inputIdToken = firstNonEmpty(
+            record.idToken,
+            record.id_token,
+            record.token?.idToken,
+            record.token?.id_token,
+            record.credentials?.id_token,
+          );
+
+          const payload = parseJwtPayload(accessToken);
+          const idPayload = parseJwtPayload(inputIdToken);
+          const auth = getOpenAIAuthSection(payload);
+          const idAuth = getOpenAIAuthSection(idPayload);
+          const profile = getOpenAIProfileSection(payload);
+          const expiresAt = firstNonEmpty(
+            payload ? timestampFromUnixSeconds(payload.exp) : undefined,
+            normalizeTimestamp(record.expires),
+            normalizeTimestamp(record.expiresAt),
+            normalizeTimestamp(record.expired),
+            normalizeTimestamp(record.expires_at),
+          );
+          const email = firstNonEmpty(
+            record.user?.email,
+            record.email,
+            record.credentials?.email,
+            record.providerSpecificData?.email,
+            profile.email,
+            idPayload?.email,
+            payload?.email,
+          );
+          const accountId = firstNonEmpty(
+            record.account?.id,
+            record.account_id,
+            record.chatgptAccountId,
+            record.providerSpecificData?.chatgptAccountId,
+            record.providerSpecificData?.chatgpt_account_id,
+            record.credentials?.chatgpt_account_id,
+            auth.chatgpt_account_id,
+            idAuth.chatgpt_account_id,
+            record.provider === "codex" ? record.id : undefined,
+          );
+          const userId = firstNonEmpty(
+            record.user?.id,
+            record.user_id,
+            record.chatgptUserId,
+            record.providerSpecificData?.chatgptUserId,
+            record.providerSpecificData?.chatgpt_user_id,
+            auth.chatgpt_user_id,
+            auth.user_id,
+            idAuth.chatgpt_user_id,
+            idAuth.user_id,
+          );
+          const planTypeFromJwt = firstNonEmpty(
+            record.account?.planType,
+            record.account?.plan_type,
+            record.planType,
+            record.plan_type,
+            record.providerSpecificData?.chatgptPlanType,
+            record.providerSpecificData?.chatgpt_plan_type,
+            record.credentials?.plan_type,
+            auth.chatgpt_plan_type,
+            idAuth.chatgpt_plan_type,
+          );
+          const planType = firstNonEmpty(options.planType, planTypeFromJwt, "plus");
+          const namePrefix = options.namePrefix != null ? options.namePrefix : "";
+          const exportedAt = normalizeTimestamp(options.now || new Date());
+          const computedExpiresIn =
+            payload && Number.isFinite(payload.exp) && Number.isFinite(payload.iat)
+              ? payload.exp - payload.iat
+              : getExpiresIn(expiresAt, options.now || new Date());
+          const sourceName = firstNonEmpty(options.sourceName, "pasted-json");
+          const sourceType =
+            record.provider === "codex" && record.authType === "oauth" ? "9router" : "chatgpt_web_session";
+          const baseName = firstNonEmpty(email, sourceName, "ChatGPT Account");
+          const syntheticIdToken = !inputIdToken
+            ? buildSyntheticCodexIdToken(email, accountId, planType, userId, expiresAt)
+            : undefined;
+          const idToken = firstNonEmpty(inputIdToken, syntheticIdToken);
+
+          const clientId = payload?.client_id;
+          const organizations = Array.isArray(idAuth.organizations)
+            ? idAuth.organizations
+            : Array.isArray(auth.organizations)
+              ? auth.organizations
+              : [];
+          const defaultOrg = organizations.find((o) => o && o.is_default);
+          const organizationId = firstNonEmpty(
+            auth.organization_id,
+            idAuth.organization_id,
+            defaultOrg?.id,
+            organizations[0]?.id,
+          );
+          const lastRefreshDate = options.now ? new Date(options.now) : new Date();
+          const tokenVersion = lastRefreshDate.getTime();
+          const rechargedAt = new Date(lastRefreshDate.getTime() + 8 * 3600 * 1000).toISOString().slice(0, 19);
+          const isDisabled = record.disabled !== undefined ? Boolean(record.disabled) : false;
+
+          const cpa = Object.fromEntries(
+            Object.entries({
+              type: "codex",
+              account_id: accountId,
+              chatgpt_account_id: accountId,
+              email,
+              name: baseName,
+              plan_type: planType,
+              chatgpt_plan_type: planType,
+              id_token: idToken,
+              id_token_synthetic: Boolean(syntheticIdToken) || undefined,
+              access_token: accessToken,
+              refresh_token: refreshToken || "",
+              session_token: sessionToken,
+              last_refresh: exportedAt,
+              expired: expiresAt,
+              disabled: Boolean(record.disabled) || undefined,
+            }).filter(([, v]) => v !== undefined && v !== null),
+          );
+
+          const cockpit = {
+            type: "codex",
+            id_token: idToken,
+            access_token: accessToken,
+            refresh_token: refreshToken || "",
+            account_id: accountId,
+            last_refresh: exportedAt,
+            email,
+            expired: expiresAt,
+            account_note: firstNonEmpty(
+              record.account_note,
+              record.accountInfo,
+              record.account_info,
+              record.note,
+              record.notes,
+              record.remark,
+            ),
+          };
+
+          const sub2apiAccount = stripUnavailable({
+            name: `${namePrefix}${baseName}`,
+            platform: "openai",
+            type: "oauth",
+            credentials: {
+              _token_version: tokenVersion,
+              access_token: accessToken,
+              chatgpt_account_id: accountId,
+              chatgpt_user_id: userId,
+              client_id: clientId,
+              email,
+              expires_at: expiresAt,
+              expires_in: computedExpiresIn,
+              id_token: idToken,
+              id_token_synthetic: Boolean(syntheticIdToken) || undefined,
+              model_mapping: DEFAULT_MODEL_MAPPING,
+              organization_id: organizationId,
+              plan_type: planType,
+              refresh_token: refreshToken || "",
+            },
+            extra: buildExtra(exportedAt),
+            concurrency: 10,
+            priority: 1,
+            rate_multiplier: 1,
+            auto_pause_on_expired: true,
+            recharged: !isDisabled,
+            recharged_at: rechargedAt,
+          });
+
+          const codexAuth = {
+            auth_mode: "chatgpt",
+            OPENAI_API_KEY: null,
+            tokens: {
+              id_token: idToken,
+              access_token: accessToken,
+              refresh_token: refreshToken || "",
+              account_id: accountId,
+            },
+            last_refresh: exportedAt,
+          };
+
+          const priority = Number.isFinite(Number(record.priority)) ? Number(record.priority) : 9;
+          const isActive = typeof record.isActive === "boolean" ? record.isActive : !Boolean(record.disabled);
+          const createdAt = normalizeTimestamp(record.createdAt) || exportedAt;
+          const updatedAt = normalizeTimestamp(record.updatedAt) || exportedAt;
+          const nineRouter = stripUnavailable({
+            accessToken,
+            refreshToken,
+            expiresAt,
+            testStatus: firstNonEmpty(record.testStatus, record.test_status, "active"),
+            expiresIn: computedExpiresIn,
+            providerSpecificData: { chatgptAccountId: accountId, chatgptPlanType: planType },
+            id: accountId,
+            provider: "codex",
+            authType: "oauth",
+            name: baseName,
+            email,
+            priority,
+            isActive,
+            createdAt,
+            updatedAt,
+          });
+
+          return {
+            sourceName,
+            sourcePath: options.sourcePath,
+            email,
+            name: baseName,
+            planType,
+            expiresAt,
+            cpa,
+            cockpit,
+            nineRouter,
+            sub2apiAccount,
+            codexAuth,
+            hasRefreshToken: Boolean(refreshToken),
+            hasRealIdToken: Boolean(inputIdToken),
+            isSourceWebSession: sourceType === "chatgpt_web_session",
+          };
+        }
+
+        function buildSub2apiDocument(converted, now = new Date()) {
+          return {
+            exported_at: normalizeTimestamp(now),
+            proxies: [],
+            accounts: converted.map((i) => i.sub2apiAccount),
+          };
+        }
+
+        function buildOutputDocument() {
+          const now = new Date();
+          if (state.format === "sub2api") return buildSub2apiDocument(state.converted, now);
+          if (state.format === "codex")
+            return state.converted.length === 1
+              ? state.converted[0].codexAuth
+              : state.converted.map((i) => i.codexAuth);
+          if (state.format === "cpa")
+            return state.converted.length === 1 ? state.converted[0].cpa : state.converted.map((i) => i.cpa);
+          if (state.format === "cockpit")
+            return state.converted.length === 1
+              ? state.converted[0].cockpit
+              : state.converted.map((i) => i.cockpit);
+          if (state.format === "9router")
+            return state.converted.length === 1
+              ? state.converted[0].nineRouter
+              : state.converted.map((i) => i.nineRouter);
+          return buildSub2apiDocument(state.converted, now);
+        }
+
+        function convertFromText(text) {
+          const sources = parseInputDocuments(text);
+          const converted = [];
+          const skipped = [];
+          const now = new Date();
+
+          sources.forEach((item, index) => {
+            const issues = validateTokenFields(item.value, index, state.format);
+            issues.forEach((reason) => {
+              skipped.push({
+                sourceName: item.sourceName,
+                path: item.path,
+                reason,
+                html: true,
+                severity: "warning",
+              });
+            });
+
+            try {
+              converted.push(
+                convertSession(item.value, {
+                  now,
+                  sourceName: item.sourceName,
+                  sourcePath: item.path || `$[${index}]`,
+                  planType: state.planType,
+                  namePrefix: state.namePrefix,
+                }),
+              );
+            } catch (error) {
+              skipped.push({
+                sourceName: item.sourceName,
+                path: item.path,
+                reason: error instanceof Error ? error.message : "无法转换",
+                severity: "error",
+              });
+            }
+          });
+
+          if (!sources.length) {
+            skipped.push({
+              sourceName: "pasted-json",
+              path: "$",
+              reason: "未找到包含 accessToken 和 user/email 的 session 对象",
+              severity: "error",
+            });
+          }
+
+          state.converted = converted;
+          state.skipped = skipped;
+          state.sessions = sources;
+          updateOutput();
+        }
+
+        // ============ Render ============
+
+        function setStatus(element, text, tone = "") {
+          element.classList.remove("is-ok", "is-error", "is-warning", "status-rich");
+          if (tone === "ok" || tone === "error" || tone === "warning") {
+            element.classList.add(`is-${tone}`);
+          }
+          element.innerHTML = `<span class="status-dot" aria-hidden="true"></span><span>${escapeHtml(text)}</span>`;
+        }
+
+        function setRichStatus(element, title, details, tone) {
+          element.classList.remove("is-ok", "is-error", "is-warning");
+          element.classList.add("status-rich");
+          if (tone === "ok" || tone === "error" || tone === "warning") {
+            element.classList.add(`is-${tone}`);
+          }
+          const list = Array.isArray(details) ? details.filter(Boolean) : [details].filter(Boolean);
+          const items = list
+            .map((i) => `<div class="status-rich-item">${i}</div>`)
+            .join("");
+          element.innerHTML = `
+            <div class="status-rich-title"><span class="status-dot" aria-hidden="true"></span>${escapeHtml(title)}</div>
+            ${items ? `<div class="status-rich-list">${items}</div>` : ""}
+          `;
+        }
+
+        function markInputError(active) {
+          elements.input.classList.toggle("has-error", Boolean(active));
+        }
+
+        function renderJsonError(content, check) {
+          const details = [
+            `位置：第 <code>${check.line}</code> 行，第 <code>${check.col}</code> 列附近。`,
+            `原始提示：${escapeHtml(check.error)}`,
+            `<code class="json-snippet">${escapeHtml(check.preview)}</code>`,
+            `建议：${check.suggestions.map(escapeHtml).join(" ")}`,
+          ];
+          setRichStatus(elements.inputStatus, "JSON 格式错误", details, "error");
+          markInputError(true);
+        }
+
+        function animateCounter(element, targetValue) {
+          const current = parseInt(element.textContent, 10) || 0;
+          const target = Number(targetValue) || 0;
+          if (current === target) return;
+          const duration = 360;
+          const startTime = performance.now();
+
+          function tick(now) {
+            const t = Math.min(1, (now - startTime) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const value = Math.round(current + (target - current) * eased);
+            element.textContent = String(value);
+            if (t < 1) requestAnimationFrame(tick);
+            else element.textContent = String(target);
+          }
+
+          requestAnimationFrame(tick);
+        }
+
+        function updateConfigVisibility() {
+          const visible = state.format === "sub2api" || state.format === "codex";
+          elements.configRow.style.display = visible ? "flex" : "none";
+        }
+
+        function updateFormatIndicator() {
+          const active = elements.formatButtons.find((b) => b.dataset.format === state.format);
+          if (!active || !elements.pillIndicator) return;
+          const parent = active.parentElement;
+          const r = active.getBoundingClientRect();
+          const pr = parent.getBoundingClientRect();
+          elements.pillIndicator.style.width = `${r.width}px`;
+          elements.pillIndicator.style.transform = `translateX(${r.left - pr.left + parent.scrollLeft}px)`;
+        }
+
+        function updateOutput() {
+          const hasConverted = state.converted.length > 0;
+          let outputText = "";
+          if (hasConverted) outputText = JSON.stringify(buildOutputDocument(), null, 2);
+
+          state.outputText = outputText;
+          elements.output.value = outputText;
+          elements.copyOutput.disabled = !outputText;
+          elements.downloadOutput.disabled = !outputText;
+
+          animateCounter(elements.statCount, state.converted.length);
+          animateCounter(elements.statErrors, state.skipped.length);
+          elements.statFormat.textContent = OUTPUT_LABELS[state.format];
+          elements.outputFormatLabel.textContent = OUTPUT_LABELS[state.format];
+
+          elements.statCountCard.classList.toggle("stat-zero", state.converted.length === 0);
+          elements.statErrorsCard.classList.toggle("stat-zero", state.skipped.length === 0);
+          elements.statErrorsCard.classList.toggle("stat-warn", state.skipped.length > 0);
+
+          renderAccounts();
+          renderIssues();
+
+          if (outputText) {
+            setStatus(elements.outputStatus, `已生成 ${state.converted.length} 个账号`, "ok");
+          } else {
+            setStatus(
+              elements.outputStatus,
+              state.skipped.length ? "存在问题，输出为空" : "暂无输出",
+              state.skipped.length ? "error" : "",
+            );
+          }
+        }
+
+        function renderAccounts() {
+          if (!state.converted.length) {
+            elements.accountsSection.hidden = true;
+            elements.accountsGrid.innerHTML = "";
+            return;
+          }
+
+          elements.accountsSection.hidden = false;
+          elements.accountsCount.textContent = String(state.converted.length);
+
+          elements.accountsGrid.innerHTML = state.converted
+            .map((item) => {
+              const plan = (item.planType || "").toUpperCase();
+              const time = item.expiresAt ? formatDisplayDate(item.expiresAt) : "—";
+              return `
+                <div class="account-card">
+                  <div class="account-card-head">
+                    <span class="account-badge">${escapeHtml(plan || "—")}</span>
+                    <span class="account-time" title="${escapeHtml(item.expiresAt || "")}">${escapeHtml(time)}</span>
+                  </div>
+                  <div class="account-name" title="${escapeHtml(item.name || "")}">${escapeHtml(
+                    item.email || item.name || "未知账号",
+                  )}</div>
+                  <div class="account-meta">
+                    <span title="${escapeHtml(item.sourceName || "")}">${escapeHtml(item.sourceName || "pasted-json")}</span>
+                  </div>
+                </div>
+              `;
+            })
+            .join("");
+        }
+
+        function renderIssues() {
+          if (!state.skipped.length) {
+            elements.issuesBlock.hidden = true;
+            elements.issues.innerHTML = "";
+            return;
+          }
+
+          elements.issuesBlock.hidden = false;
+          elements.issuesCount.textContent = String(state.skipped.length);
+
+          elements.issues.innerHTML = state.skipped
+            .map((item) => {
+              const reason = item.html ? item.reason : escapeHtml(item.reason);
+              const source = `${escapeHtml(item.sourceName || "input")} ${escapeHtml(item.path || "")}`.trim();
+              return `<div class="issue-row" data-severity="${escapeHtml(item.severity || "warning")}">
+                <span class="issue-source">${source}</span>${reason}
+              </div>`;
+            })
+            .join("");
+        }
+
+        // ============ Conversion trigger ============
+
+        let convertTimer = null;
+
+        function scheduleConvert() {
+          if (convertTimer) clearTimeout(convertTimer);
+          convertTimer = setTimeout(runConversion, 500);
+        }
+
+        function runConversion() {
+          convertTimer = null;
+          const text = elements.input.value;
+          if (!text.trim()) {
+            state.converted = [];
+            state.skipped = [];
+            state.sessions = [];
+            markInputError(false);
+            updateOutput();
+            setStatus(elements.inputStatus, "等待输入");
+            return;
+          }
+
+          const check = validateJSONDetailed(text);
+          if (!check.valid) {
+            state.converted = [];
+            state.skipped = [];
+            state.sessions = [];
+            state.outputText = "";
+            updateOutput();
+            renderJsonError(text, check);
+            return;
+          }
+
+          markInputError(false);
+
+          try {
+            convertFromText(text);
+            if (state.converted.length) {
+              const note = state.skipped.length;
+              const msg = note
+                ? `解析完成，${state.converted.length} 个账号 · ${note} 项需关注`
+                : `解析完成，${state.converted.length} 个账号`;
+              setStatus(elements.inputStatus, msg, note ? "warning" : "ok");
+            } else {
+              setStatus(elements.inputStatus, "没有可转换账号", "error");
+            }
+          } catch (e) {
+            state.converted = [];
+            state.skipped = [
+              {
+                sourceName: "pasted-json",
+                path: "$",
+                reason: e instanceof Error ? e.message : "JSON 解析失败",
+                severity: "error",
+              },
+            ];
+            state.outputText = "";
+            updateOutput();
+            setStatus(elements.inputStatus, e instanceof Error ? e.message : "JSON 解析失败", "error");
+          }
+        }
+
+        // ============ Output actions ============
+
+        function downloadOutput() {
+          if (!state.outputText) return;
+          const first = state.converted[0];
+          let fileName;
+          if (state.format === "codex" && state.converted.length === 1) {
+            fileName = "auth.json";
+          } else {
+            const base = sanitizeFileToken(first?.email || first?.name || state.format);
+            fileName = `${base}.${state.format}.${getTimestampToken()}.json`;
+          }
+          const blob = new Blob([state.outputText], { type: "application/json;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.append(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast(`已下载 ${fileName}`, "success", "download");
+        }
+
+        async function copyOutput() {
+          if (!state.outputText) return;
+          try {
+            await navigator.clipboard.writeText(state.outputText);
+          } catch {
+            elements.output.select();
+            document.execCommand("copy");
+          }
+
+          elements.copyOutput.classList.add("is-copied");
+          const iconCopy = elements.copyOutput.querySelector(".icon-copy");
+          const iconCheck = elements.copyOutput.querySelector(".icon-check");
+          const label = elements.copyOutput.querySelector(".icon-btn-label");
+          if (iconCopy) iconCopy.style.display = "none";
+          if (iconCheck) iconCheck.style.display = "block";
+          if (label) label.textContent = "已复制";
+
+          showToast("已复制到剪贴板", "success", "check");
+
+          setTimeout(() => {
+            elements.copyOutput.classList.remove("is-copied");
+            if (iconCopy) iconCopy.style.display = "";
+            if (iconCheck) iconCheck.style.display = "none";
+            if (label) label.textContent = "复制";
+          }, 1800);
+        }
+
+        // ============ Toast ============
+
+        const TOAST_ICONS = {
+          check: '<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>',
+          download: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>',
+          alert: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>',
+        };
+
+        function showToast(message, tone = "info", icon = "check") {
+          const toast = document.createElement("div");
+          toast.className = `toast toast-${tone}`;
+          toast.innerHTML = `${TOAST_ICONS[icon] || ""}<span>${escapeHtml(message)}</span>`;
+          elements.toastContainer.appendChild(toast);
+
+          setTimeout(() => {
+            toast.classList.add("fade-out");
+            setTimeout(() => toast.remove(), 260);
+          }, 1800);
+        }
+
+        // ============ Files ============
+
+        async function readFiles(files) {
+          const json = Array.from(files).filter((f) => f.name.toLowerCase().endsWith(".json"));
+          if (!json.length) {
+            setStatus(elements.inputStatus, "没有选择 JSON 文件", "error");
+            return;
+          }
+
+          const documents = [];
+          const fileErrors = [];
+
+          for (const file of json) {
+            try {
+              const text = await file.text();
+              const parsed = JSON.parse(text);
+              const found = collectSessionLikeObjects(parsed, file.webkitRelativePath || file.name);
+              if (!found.length) {
+                fileErrors.push({
+                  sourceName: file.webkitRelativePath || file.name,
+                  path: "$",
+                  reason: "未找到包含 accessToken 和 user/email 的 session 对象",
+                  severity: "error",
+                });
+              }
+              documents.push(...found);
+            } catch (e) {
+              fileErrors.push({
+                sourceName: file.webkitRelativePath || file.name,
+                path: "$",
+                reason: e instanceof Error ? e.message : "无法读取文件",
+                severity: "error",
+              });
+            }
+          }
+
+          elements.input.value =
+            documents.length === 1
+              ? JSON.stringify(documents[0].value, null, 2)
+              : JSON.stringify(
+                  documents.map((i) => i.value),
+                  null,
+                  2,
+                );
+
+          runConversion();
+
+          if (fileErrors.length) {
+            state.skipped = [...state.skipped, ...fileErrors];
+            renderIssues();
+          }
+
+          const summary = `读取 ${json.length} 个文件 · ${state.converted.length} 个账号${
+            fileErrors.length ? ` · ${fileErrors.length} 个文件异常` : ""
+          }`;
+          setStatus(
+            elements.inputStatus,
+            summary,
+            state.converted.length ? (fileErrors.length ? "warning" : "ok") : "error",
+          );
+        }
+
+        // ============ Drag & drop ============
+
+        function setupDragAndDrop() {
+          const wrapper = elements.textareaShell;
+          if (!wrapper) return;
+
+          let dragCounter = 0;
+
+          const prevent = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          };
+
+          ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+            wrapper.addEventListener(eventName, prevent);
+            document.body.addEventListener(eventName, prevent);
+          });
+
+          wrapper.addEventListener("dragenter", () => {
+            dragCounter++;
+            elements.dragOverlay.classList.add("active");
+          });
+          wrapper.addEventListener("dragleave", () => {
+            dragCounter--;
+            if (dragCounter <= 0) {
+              dragCounter = 0;
+              elements.dragOverlay.classList.remove("active");
+            }
+          });
+          wrapper.addEventListener("drop", async (e) => {
+            dragCounter = 0;
+            elements.dragOverlay.classList.remove("active");
+            const dt = e.dataTransfer;
+            if (!dt) return;
+            if (dt.files && dt.files.length > 0) {
+              await readFiles(dt.files);
+              return;
+            }
+            const text = dt.getData("text/plain");
+            if (text) {
+              elements.input.value = text;
+              runConversion();
+            }
+          });
+        }
+
+        // ============ Event bindings ============
+
+        elements.formatButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            state.format = button.dataset.format;
+            elements.formatButtons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+            updateFormatIndicator();
+            updateConfigVisibility();
+            if (elements.input.value.trim()) runConversion();
+            else updateOutput();
+          });
+        });
+
+        elements.input.addEventListener("input", scheduleConvert);
+        elements.copyOutput.addEventListener("click", copyOutput);
+        elements.downloadOutput.addEventListener("click", downloadOutput);
+        elements.pickFiles.addEventListener("click", () => elements.fileInput.click());
+        elements.fileInput.addEventListener("change", (e) => {
+          readFiles(e.target.files);
+          e.target.value = "";
+        });
+        elements.pickFolder.addEventListener("click", () => elements.folderInput.click());
+        elements.folderInput.addEventListener("change", (e) => {
+          readFiles(e.target.files);
+          e.target.value = "";
+        });
+
+        elements.planTypeInput.addEventListener("input", (e) => {
+          state.planType = e.target.value.trim() || "plus";
+          if (elements.input.value.trim()) scheduleConvert();
+        });
+        elements.namePrefixInput.addEventListener("input", (e) => {
+          state.namePrefix = e.target.value;
+          if (elements.input.value.trim()) scheduleConvert();
+        });
+
+        elements.clearInput.addEventListener("click", () => {
+          elements.input.value = "";
+          runConversion();
+        });
+
+        elements.loadExample.addEventListener("click", () => {
+          elements.input.value = JSON.stringify(exampleSession, null, 2);
+          runConversion();
+          showToast("已填入示例数据", "success", "check");
+        });
+
+        window.addEventListener("resize", updateFormatIndicator);
+
+        // ============ Init ============
+
+        setupDragAndDrop();
+        updateConfigVisibility();
+        updateOutput();
+        requestAnimationFrame(updateFormatIndicator);
+      })();
+    </script>
+  </body>
+</html>
