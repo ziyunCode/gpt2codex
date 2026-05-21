@@ -6,7 +6,6 @@
   <p><strong>ChatGPT Web Session ⇄ 5 种 OAuth 配置格式互转器</strong></p>
 
   <p>
-    <a href="https://Txy-Sky.github.io/gpt2codex/">🌐 在线工具</a> ·
     <a href="#-特性">特性</a> ·
     <a href="#-用法">用法</a> ·
     <a href="#-支持格式">格式</a> ·
@@ -57,10 +56,6 @@
 ---
 
 ## 🚀 用法
-
-### 在线使用
-
-直接访问 [Txy-Sky.github.io/gpt2codex](https://Txy-Sky.github.io/gpt2codex/) （需仓库启用 GitHub Pages）。
 
 ### 本地使用
 
