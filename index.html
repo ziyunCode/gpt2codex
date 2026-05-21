@@ -1476,10 +1476,10 @@
         <section class="toolbar" aria-label="输出格式">
           <div class="format-pills" role="tablist">
             <button class="pill" type="button" role="tab" data-format="sub2api" aria-pressed="true">sub2api</button>
-            <button class="pill" type="button" role="tab" data-format="codex" aria-pressed="false">Codex</button>
             <button class="pill" type="button" role="tab" data-format="cpa" aria-pressed="false">CPA</button>
             <button class="pill" type="button" role="tab" data-format="cockpit" aria-pressed="false">Cockpit</button>
             <button class="pill" type="button" role="tab" data-format="9router" aria-pressed="false">9router</button>
+            <button class="pill" type="button" role="tab" data-format="codex" aria-pressed="false">Codex</button>
             <span class="pill-indicator" aria-hidden="true"></span>
           </div>
         </section>
@@ -1599,7 +1599,15 @@
                 </svg>
                 <span class="icon-btn-label">复制</span>
               </button>
-              <button class="icon-btn is-primary" id="download-output" type="button" disabled title="下载 JSON">
+              <button class="icon-btn" id="download-zip" type="button" disabled title="打包为 ZIP 下载">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 4h6l2 3h8v13H4z" />
+                  <path d="M12 11v5" />
+                  <path d="M9.5 13.5L12 16l2.5-2.5" />
+                </svg>
+                <span>打包下载</span>
+              </button>
+              <button class="icon-btn is-primary" id="download-output" type="button" disabled title="逐账号下载 JSON">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <path d="M7 10l5 5 5-5" />
@@ -1735,6 +1743,7 @@
           configRow: document.querySelector("#config-row"),
           copyOutput: document.querySelector("#copy-output"),
           downloadOutput: document.querySelector("#download-output"),
+          downloadZip: document.querySelector("#download-zip"),
           dragOverlay: document.querySelector("#drag-overlay"),
           fileInput: document.querySelector("#file-input"),
           folderInput: document.querySelector("#folder-input"),
@@ -2455,6 +2464,15 @@
           return buildSub2apiDocument(state.converted, now);
         }
 
+        function buildSingleOutputDocument(item, now = new Date()) {
+          if (state.format === "sub2api") return buildSub2apiDocument([item], now);
+          if (state.format === "codex") return item.codexAuth;
+          if (state.format === "cpa") return item.cpa;
+          if (state.format === "cockpit") return item.cockpit;
+          if (state.format === "9router") return item.nineRouter;
+          return buildSub2apiDocument([item], now);
+        }
+
         function convertFromText(text) {
           const sources = parseInputDocuments(text);
           const converted = [];
@@ -2592,6 +2610,7 @@
           elements.output.value = outputText;
           elements.copyOutput.disabled = !outputText;
           elements.downloadOutput.disabled = !outputText;
+          elements.downloadZip.disabled = !outputText;
 
           animateCounter(elements.statCount, state.converted.length);
           animateCounter(elements.statErrors, state.skipped.length);
@@ -2733,26 +2752,165 @@
 
         // ============ Output actions ============
 
-        function downloadOutput() {
-          if (!state.outputText) return;
-          const first = state.converted[0];
-          let fileName;
-          if (state.format === "codex" && state.converted.length === 1) {
-            fileName = "auth.json";
-          } else {
-            const base = sanitizeFileToken(first?.email || first?.name || state.format);
-            fileName = `${base}.${state.format}.${getTimestampToken()}.json`;
+        function getOutputFileName(item, index, total, timestamp) {
+          if (state.format === "codex" && total === 1) return "auth.json";
+
+          const base = sanitizeFileToken(item?.email || item?.name || `${state.format}-${index + 1}`);
+          const suffix = total > 1 ? `.${String(index + 1).padStart(2, "0")}` : "";
+          return `${base}.${state.format}${suffix}.${timestamp}.json`;
+        }
+
+        function saveBlob(blob, fileName, delay = 0) {
+          setTimeout(() => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName;
+            document.body.append(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          }, delay);
+        }
+
+        function downloadJsonFile(documentValue, fileName, delay = 0) {
+          const blob = new Blob([JSON.stringify(documentValue, null, 2)], { type: "application/json;charset=utf-8" });
+          saveBlob(blob, fileName, delay);
+        }
+
+        function getDownloadFiles(now = new Date()) {
+          const timestamp = getTimestampToken(now);
+          const total = state.converted.length;
+          return state.converted.map((item, index) => ({
+            name: getOutputFileName(item, index, total, timestamp),
+            content: JSON.stringify(buildSingleOutputDocument(item, now), null, 2),
+          }));
+        }
+
+        const CRC32_TABLE = (() => {
+          const table = new Uint32Array(256);
+          for (let i = 0; i < 256; i++) {
+            let c = i;
+            for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+            table[i] = c >>> 0;
           }
-          const blob = new Blob([state.outputText], { type: "application/json;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = fileName;
-          document.body.append(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          showToast(`已下载 ${fileName}`, "success", "download");
+          return table;
+        })();
+
+        function crc32(bytes) {
+          let crc = 0xffffffff;
+          for (let i = 0; i < bytes.length; i++) crc = CRC32_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+          return (crc ^ 0xffffffff) >>> 0;
+        }
+
+        function dosDateTime(date = new Date()) {
+          const year = Math.max(1980, date.getFullYear());
+          const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+          const day = (year - 1980) << 9 | ((date.getMonth() + 1) << 5) | date.getDate();
+          return { time, day };
+        }
+
+        function concatUint8(chunks, totalSize) {
+          const out = new Uint8Array(totalSize);
+          let offset = 0;
+          chunks.forEach((chunk) => {
+            out.set(chunk, offset);
+            offset += chunk.length;
+          });
+          return out;
+        }
+
+        function createZipBlob(files, now = new Date()) {
+          const encoder = new TextEncoder();
+          const chunks = [];
+          const central = [];
+          let offset = 0;
+          const { time, day } = dosDateTime(now);
+
+          const write16 = (view, pos, value) => view.setUint16(pos, value, true);
+          const write32 = (view, pos, value) => view.setUint32(pos, value >>> 0, true);
+
+          files.forEach((file) => {
+            const nameBytes = encoder.encode(file.name);
+            const data = encoder.encode(file.content);
+            const crc = crc32(data);
+
+            const local = new Uint8Array(30 + nameBytes.length);
+            const lv = new DataView(local.buffer);
+            write32(lv, 0, 0x04034b50);
+            write16(lv, 4, 20);
+            write16(lv, 6, 0x0800);
+            write16(lv, 8, 0);
+            write16(lv, 10, time);
+            write16(lv, 12, day);
+            write32(lv, 14, crc);
+            write32(lv, 18, data.length);
+            write32(lv, 22, data.length);
+            write16(lv, 26, nameBytes.length);
+            write16(lv, 28, 0);
+            local.set(nameBytes, 30);
+            chunks.push(local, data);
+
+            const cent = new Uint8Array(46 + nameBytes.length);
+            const cv = new DataView(cent.buffer);
+            write32(cv, 0, 0x02014b50);
+            write16(cv, 4, 20);
+            write16(cv, 6, 20);
+            write16(cv, 8, 0x0800);
+            write16(cv, 10, 0);
+            write16(cv, 12, time);
+            write16(cv, 14, day);
+            write32(cv, 16, crc);
+            write32(cv, 20, data.length);
+            write32(cv, 24, data.length);
+            write16(cv, 28, nameBytes.length);
+            write16(cv, 30, 0);
+            write16(cv, 32, 0);
+            write16(cv, 34, 0);
+            write16(cv, 36, 0);
+            write32(cv, 38, 0);
+            write32(cv, 42, offset);
+            cent.set(nameBytes, 46);
+            central.push(cent);
+
+            offset += local.length + data.length;
+          });
+
+          const centralSize = central.reduce((sum, chunk) => sum + chunk.length, 0);
+          chunks.push(...central);
+
+          const end = new Uint8Array(22);
+          const ev = new DataView(end.buffer);
+          write32(ev, 0, 0x06054b50);
+          write16(ev, 4, 0);
+          write16(ev, 6, 0);
+          write16(ev, 8, files.length);
+          write16(ev, 10, files.length);
+          write32(ev, 12, centralSize);
+          write32(ev, 16, offset);
+          write16(ev, 20, 0);
+          chunks.push(end);
+
+          return new Blob([concatUint8(chunks, offset + centralSize + end.length)], { type: "application/zip" });
+        }
+
+        function downloadOutput() {
+          if (!state.outputText || !state.converted.length) return;
+
+          const files = getDownloadFiles(new Date());
+          files.forEach((file, index) => downloadJsonFile(JSON.parse(file.content), file.name, index * 120));
+
+          showToast(files.length === 1 ? "已下载 1 个文件" : `已下载 ${files.length} 个账号文件`, "success", "download");
+        }
+
+        function downloadZip() {
+          if (!state.outputText || !state.converted.length) return;
+
+          const now = new Date();
+          const files = getDownloadFiles(now);
+          const zipName = `accounts.${state.format}.${getTimestampToken(now)}.zip`;
+          saveBlob(createZipBlob(files, now), zipName);
+          showToast(`已打包 ${files.length} 个账号到 ${zipName}`, "success", "download");
         }
 
         async function copyOutput() {
@@ -2926,6 +3084,7 @@
         elements.input.addEventListener("input", scheduleConvert);
         elements.copyOutput.addEventListener("click", copyOutput);
         elements.downloadOutput.addEventListener("click", downloadOutput);
+        elements.downloadZip.addEventListener("click", downloadZip);
         elements.pickFiles.addEventListener("click", () => elements.fileInput.click());
         elements.fileInput.addEventListener("change", (e) => {
           readFiles(e.target.files);
