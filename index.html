@@ -1910,9 +1910,11 @@
 
         function sanitizeFileToken(value, fallback = "chatgpt-session") {
           const base = firstNonEmpty(value, fallback) || fallback;
+          const isEmail = base.includes("@");
+          let stripped = base;
+          if (!isEmail) stripped = stripped.replace(/\.[^.]+$/u, "");
           return (
-            base
-              .replace(/\.[^.]+$/u, "")
+            stripped
               .replace(/[\\/:*?"<>|]+/g, "-")
               .replace(/\s+/g, "-")
               .replace(/-+/g, "-")
@@ -2757,7 +2759,7 @@
 
           const base = sanitizeFileToken(item?.email || item?.name || `${state.format}-${index + 1}`);
           const suffix = total > 1 ? `.${String(index + 1).padStart(2, "0")}` : "";
-          return `${base}.${state.format}${suffix}.${timestamp}.json`;
+          return `${base}${suffix}.${timestamp}.${state.format}.json`;
         }
 
         function saveBlob(blob, fileName, delay = 0) {
@@ -2908,7 +2910,7 @@
 
           const now = new Date();
           const files = getDownloadFiles(now);
-          const zipName = `accounts.${state.format}.${getTimestampToken(now)}.zip`;
+          const zipName = `accounts.${getTimestampToken(now)}.${state.format}.zip`;
           saveBlob(createZipBlob(files, now), zipName);
           showToast(`已打包 ${files.length} 个账号到 ${zipName}`, "success", "download");
         }
