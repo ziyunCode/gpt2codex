@@ -3,7 +3,7 @@
 
   <h1>gpt2codex</h1>
 
-  <p><strong>ChatGPT Web Session ⇄ 5 种 OAuth 配置格式互转器</strong></p>
+  <p><strong>ChatGPT Web Session ⇄ 7 种 OAuth 配置格式互转器</strong></p>
 
   <p>
     <a href="#-特性">特性</a> ·
@@ -28,7 +28,7 @@
   <img src="docs/screenshot-fullpage.png" alt="gpt2codex 完整界面" width="100%" />
 </p>
 
-> 顶部品牌区 + 账号兼容性卡 → 5 种格式 Tab（带滑动下划线）→ 配置行（Plan Type / Name Prefix）→ 输入/输出双栏 → 实时校验诊断 → 统计卡片 → Session 获取指引。
+> 顶部品牌区 + 账号兼容性卡 → 7 种格式 Tab（带滑动下划线）→ 配置行（Plan Type / Name Prefix）→ 输入/输出双栏 → 实时校验诊断 → 统计卡片 → Session 获取指引。
 
 ---
 
@@ -36,12 +36,12 @@
 
 | | 能力 | 说明 |
 |---|------|------|
-| 🔄 | **5 种格式互转** | `sub2api` · `Codex` · `CPA` · `Cockpit` · `9router` 任意源 → 任意目标 |
+| 🔄 | **7 种格式互转** | `sub2api` · `CPA` · `Cockpit` · `9router` · `AxonHub` · `Codex-Manager` · `Codex` 任意源 → 任意目标 |
 | 🔒 | **完全本地解析** | 纯浏览器端 JavaScript，无后端请求；不上传 Token、不写入存储 |
-| 🧠 | **智能输入识别** | 自动检测 ChatGPT Web Session / Codex `auth.json` / sub2api accounts / Cockpit / 9router 等结构 |
+| 🧠 | **智能输入识别** | 自动检测 ChatGPT Web Session / Codex `auth.json` / sub2api accounts / Cockpit / 9router / AxonHub / Codex-Manager 等结构 |
 | ⚡ | **实时校验诊断** | JSON 行/列定位 + JWT 三段结构验证 + email 格式 + 时间字段有效性 |
 | 📦 | **批量处理** | 拖拽多文件 + 文件夹选择（`webkitdirectory`）一次导入 |
-| 🛡️ | **合成 id_token 兜底** | Web Session 通常无 `id_token`，自动生成 CPA/Codex/Cockpit 可解析的占位 claims |
+| 🛡️ | **合成 id_token 兜底** | Web Session 通常无 `id_token`，自动生成 CPA/Codex/Cockpit/AxonHub 可解析的占位 claims |
 | 🎨 | **优雅清爽 UI** | Swiss Modernism 设计语言 + Inter + JetBrains Mono · 流畅微交互 |
 
 ---
@@ -80,6 +80,8 @@ cd gpt2codex
 - ✅ CPA 格式（扁平 codex 对象）
 - ✅ Cockpit 格式
 - ✅ 9router 格式
+- ✅ AxonHub Codex `auth.json`
+- ✅ Codex-Manager 批量导入 JSON
 
 ---
 
@@ -92,10 +94,12 @@ cd gpt2codex
 | **CPA** | ChatGPT-Proxy-Api 代理 | 扁平 codex 类型对象，含 `account_id` · `email` · `plan_type` · `id_token` · `access_token` · `session_token` · `expired` |
 | **Cockpit** | Cockpit 管理面板 | 含 `account_note` 字段，结构精简 |
 | **9router** | 9router 路由网关 | `providerSpecificData{chatgptAccountId, chatgptPlanType}` + `createdAt` / `updatedAt` / `isActive` / `testStatus` |
+| **AxonHub** | AxonHub Codex 配置 | `auth.json` 结构：`auth_mode` + `last_refresh` + `tokens{access_token, refresh_token, id_token}`；缺少真实 `refresh_token` 时写入 `__missing_refresh_token__` 占位值 |
+| **Codex-Manager** | Codex-Manager 批量导入 | `{tokens, meta}` 结构，含 `access_token` / `refresh_token` / `id_token` 与 `meta.label` / `workspace_id` / `chatgpt_account_id` / `note`；缺少真实 `refresh_token` 时保留空字符串 |
 
 ### 字段映射可配置
 
-- **Plan Type**：覆盖从 JWT 自动提取的 `plan_type` 字段（默认 `plus`）
+- **Plan Type**：默认留空自动使用 JWT / 输入字段里的 `plan_type` / `chatgpt_plan_type`（如 `team`）；无法提取时回退为 `plus`，填写后才强制覆盖
 - **Name Prefix**：拼接到 sub2api `name` 字段前（默认 `[testplus]`）
 
 ---

@@ -1433,7 +1433,7 @@
         <div class="intro-text">
           <h1 class="intro-title">Session Format Converter</h1>
           <p class="intro-subtitle">
-            ChatGPT Web Session 与 sub2api / Codex / CPA / Cockpit / 9router 五种 OAuth 配置格式互转，浏览器本地解析。
+            ChatGPT Web Session 与 sub2api / CPA / Cockpit / 9router / AxonHub / Codex-Manager / Codex 七种 OAuth 配置格式互转，浏览器本地解析。
           </p>
           <div class="intro-chips" aria-label="处理方式">
             <span class="chip"><span class="chip-dot" aria-hidden="true"></span>本地解析</span>
@@ -1479,6 +1479,8 @@
             <button class="pill" type="button" role="tab" data-format="cpa" aria-pressed="false">CPA</button>
             <button class="pill" type="button" role="tab" data-format="cockpit" aria-pressed="false">Cockpit</button>
             <button class="pill" type="button" role="tab" data-format="9router" aria-pressed="false">9router</button>
+            <button class="pill" type="button" role="tab" data-format="axonhub" aria-pressed="false">AxonHub</button>
+            <button class="pill" type="button" role="tab" data-format="codexmanager" aria-pressed="false">Codex-Manager</button>
             <button class="pill" type="button" role="tab" data-format="codex" aria-pressed="false">Codex</button>
             <span class="pill-indicator" aria-hidden="true"></span>
           </div>
@@ -1489,14 +1491,15 @@
       <section class="config" id="config-row" aria-label="账号字段配置">
         <div class="field">
           <label class="field-label" for="plan-type">Plan Type</label>
-          <input id="plan-type" type="text" value="plus" placeholder="plus / pro / team" autocomplete="off" />
+          <input id="plan-type" type="text" value="" placeholder="自动识别 / plus / pro / team" autocomplete="off" />
         </div>
         <div class="field">
           <label class="field-label" for="name-prefix">Name Prefix</label>
           <input id="name-prefix" type="text" value="[testplus]" placeholder="名称前缀" autocomplete="off" />
         </div>
         <p class="field-hint">
-          仅 sub2api / Codex 格式使用。Plan Type 覆盖 JWT 提取值；Name Prefix 拼接到 sub2api 的 <code>name</code> 字段。
+          仅 sub2api / Codex 格式使用。Plan Type 为空时自动使用 JWT / 输入字段提取值，无法提取则回退为
+          <code>plus</code>；填写后才会强制覆盖。Name Prefix 拼接到 sub2api 的 <code>name</code> 字段。
         </p>
       </section>
 
@@ -1558,7 +1561,7 @@
                 spellcheck="false"
                 placeholder='{"user":{"email":"mark@example.com"},"expires":"2026-08-06T14:29:36.155Z","account":{"id":"...","planType":"plus"},"accessToken":"...","sessionToken":"..."}
 
-或粘贴任意 sub2api / Codex / CPA / Cockpit / 9router 配置进行格式互转'
+或粘贴任意 sub2api / CPA / Cockpit / 9router / AxonHub / Codex-Manager / Codex 配置进行格式互转'
               ></textarea>
               <div class="drop-zone" id="drag-overlay" aria-hidden="true">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1567,7 +1570,7 @@
                   <path d="M12 3v12" />
                 </svg>
                 <strong>释放 JSON 以加载</strong>
-                <span class="drop-zone-sub">支持多个文件 · 自动识别 5 种格式</span>
+                <span class="drop-zone-sub">支持多个文件 · 自动识别 7 种格式</span>
               </div>
             </div>
           </div>
@@ -1723,6 +1726,8 @@
           cpa: "CPA",
           cockpit: "Cockpit",
           "9router": "9router",
+          axonhub: "AxonHub",
+          codexmanager: "Codex-Manager",
         };
 
         const state = {
@@ -1731,7 +1736,7 @@
           converted: [],
           skipped: [],
           outputText: "",
-          planType: "plus",
+          planType: "",
           namePrefix: "[testplus]",
         };
 
@@ -1780,6 +1785,8 @@
           authProvider: "openai",
         };
 
+        const AXONHUB_PLACEHOLDER_REFRESH_TOKEN = "__missing_refresh_token__";
+
         // ============ Helpers ============
 
         function isPlainObject(value) {
@@ -1791,6 +1798,14 @@
             if (typeof value === "string" && value.trim() !== "") {
               return value.trim();
             }
+          }
+          return undefined;
+        }
+
+        function firstRealRefreshToken(...values) {
+          for (const value of values) {
+            const token = firstNonEmpty(value);
+            if (token && token !== AXONHUB_PLACEHOLDER_REFRESH_TOKEN) return token;
           }
           return undefined;
         }
@@ -1894,6 +1909,12 @@
           const ms = new Date(expiresAt).getTime();
           if (Number.isNaN(ms)) return undefined;
           return Math.max(0, Math.floor((ms - now.getTime()) / 1000));
+        }
+
+        function getAxonHubLastRefresh(expiresAt, now = new Date()) {
+          const ms = expiresAt ? new Date(expiresAt).getTime() : NaN;
+          if (Number.isNaN(ms)) return normalizeTimestamp(now);
+          return new Date(ms - 60 * 60 * 1000).toISOString();
         }
 
         function stripUnavailable(value) {
@@ -2067,6 +2088,8 @@
           const accessToken = firstNonEmpty(
             record.accessToken,
             record.access_token,
+            record.tokens?.accessToken,
+            record.tokens?.access_token,
             record.token?.accessToken,
             record.token?.access_token,
             record.credentials?.accessToken,
@@ -2075,12 +2098,15 @@
           const email = firstNonEmpty(
             record.user?.email,
             record.email,
+            record.meta?.email,
             record.credentials?.email,
             record.providerSpecificData?.email,
           );
-          const refreshToken = firstNonEmpty(
+          const refreshToken = firstRealRefreshToken(
             record.refreshToken,
             record.refresh_token,
+            record.tokens?.refreshToken,
+            record.tokens?.refresh_token,
             record.token?.refreshToken,
             record.token?.refresh_token,
             record.credentials?.refresh_token,
@@ -2126,20 +2152,21 @@
               if (visited.has(item)) return;
               visited.add(item);
 
-              // Codex auth.json detection
+              // Codex / AxonHub auth.json detection
               if (
                 isPlainObject(item.tokens) &&
                 firstNonEmpty(item.tokens.access_token, item.tokens.accessToken) &&
-                firstNonEmpty(item.tokens.account_id, item.tokens.chatgpt_account_id, item.auth_mode)
+                firstNonEmpty(
+                  item.tokens.account_id,
+                  item.tokens.accountId,
+                  item.tokens.chatgpt_account_id,
+                  item.tokens.chatgptAccountId,
+                  item.meta?.label,
+                  item.auth_mode,
+                )
               ) {
                 found.push({
-                  value: {
-                    access_token: firstNonEmpty(item.tokens.access_token, item.tokens.accessToken),
-                    id_token: firstNonEmpty(item.tokens.id_token, item.tokens.idToken),
-                    refresh_token: firstNonEmpty(item.tokens.refresh_token, item.tokens.refreshToken) || "",
-                    account_id: firstNonEmpty(item.tokens.account_id, item.tokens.chatgpt_account_id),
-                    last_refresh: item.last_refresh,
-                  },
+                  value: item,
                   sourceName,
                   path,
                 });
@@ -2149,6 +2176,8 @@
               const token = firstNonEmpty(
                 item.accessToken,
                 item.access_token,
+                item.tokens?.accessToken,
+                item.tokens?.access_token,
                 item.token?.accessToken,
                 item.token?.access_token,
                 item.credentials?.accessToken,
@@ -2159,6 +2188,12 @@
                 firstNonEmpty(
                   item.email,
                   item.name,
+                  item.label,
+                  item.meta?.label,
+                  item.tokens?.accountId,
+                  item.tokens?.account_id,
+                  item.tokens?.chatgptAccountId,
+                  item.tokens?.chatgpt_account_id,
                   item.providerSpecificData?.chatgptAccountId,
                   item.providerSpecificData?.chatgpt_account_id,
                   item.id,
@@ -2201,6 +2236,8 @@
           const accessToken = firstNonEmpty(
             record.accessToken,
             record.access_token,
+            record.tokens?.accessToken,
+            record.tokens?.access_token,
             record.token?.accessToken,
             record.token?.access_token,
             record.credentials?.accessToken,
@@ -2211,13 +2248,17 @@
           const sessionToken = firstNonEmpty(
             record.sessionToken,
             record.session_token,
+            record.tokens?.sessionToken,
+            record.tokens?.session_token,
             record.token?.sessionToken,
             record.token?.session_token,
             record.credentials?.session_token,
           );
-          const refreshToken = firstNonEmpty(
+          const refreshToken = firstRealRefreshToken(
             record.refreshToken,
             record.refresh_token,
+            record.tokens?.refreshToken,
+            record.tokens?.refresh_token,
             record.token?.refreshToken,
             record.token?.refresh_token,
             record.credentials?.refresh_token,
@@ -2225,6 +2266,8 @@
           const inputIdToken = firstNonEmpty(
             record.idToken,
             record.id_token,
+            record.tokens?.idToken,
+            record.tokens?.id_token,
             record.token?.idToken,
             record.token?.id_token,
             record.credentials?.id_token,
@@ -2245,6 +2288,7 @@
           const email = firstNonEmpty(
             record.user?.email,
             record.email,
+            record.meta?.email,
             record.credentials?.email,
             record.providerSpecificData?.email,
             profile.email,
@@ -2254,13 +2298,46 @@
           const accountId = firstNonEmpty(
             record.account?.id,
             record.account_id,
+            record.tokens?.accountId,
+            record.tokens?.account_id,
             record.chatgptAccountId,
+            record.chatgpt_account_id,
+            record.meta?.chatgptAccountId,
+            record.meta?.chatgpt_account_id,
+            record.tokens?.chatgptAccountId,
+            record.tokens?.chatgpt_account_id,
             record.providerSpecificData?.chatgptAccountId,
             record.providerSpecificData?.chatgpt_account_id,
             record.credentials?.chatgpt_account_id,
             auth.chatgpt_account_id,
             idAuth.chatgpt_account_id,
             record.provider === "codex" ? record.id : undefined,
+          );
+          const chatgptAccountId = firstNonEmpty(
+            record.chatgptAccountId,
+            record.chatgpt_account_id,
+            record.meta?.chatgptAccountId,
+            record.meta?.chatgpt_account_id,
+            record.tokens?.chatgptAccountId,
+            record.tokens?.chatgpt_account_id,
+            record.providerSpecificData?.chatgptAccountId,
+            record.providerSpecificData?.chatgpt_account_id,
+            record.credentials?.chatgpt_account_id,
+            auth.chatgpt_account_id,
+            idAuth.chatgpt_account_id,
+          );
+          const workspaceId = firstNonEmpty(
+            record.account?.workspaceId,
+            record.account?.workspace_id,
+            record.workspaceId,
+            record.workspace_id,
+            record.meta?.workspaceId,
+            record.meta?.workspace_id,
+            record.providerSpecificData?.workspaceId,
+            record.providerSpecificData?.workspace_id,
+            record.credentials?.workspace_id,
+            payload?.workspace_id,
+            idPayload?.workspace_id,
           );
           const userId = firstNonEmpty(
             record.user?.id,
@@ -2278,13 +2355,31 @@
             record.account?.plan_type,
             record.planType,
             record.plan_type,
+            record.chatgptPlanType,
+            record.chatgpt_plan_type,
+            record.meta?.planType,
+            record.meta?.plan_type,
+            record.meta?.chatgptPlanType,
+            record.meta?.chatgpt_plan_type,
+            record.tokens?.planType,
+            record.tokens?.plan_type,
+            record.tokens?.chatgptPlanType,
+            record.tokens?.chatgpt_plan_type,
             record.providerSpecificData?.chatgptPlanType,
             record.providerSpecificData?.chatgpt_plan_type,
             record.credentials?.plan_type,
+            record.credentials?.chatgpt_plan_type,
             auth.chatgpt_plan_type,
+            auth.plan_type,
             idAuth.chatgpt_plan_type,
+            idAuth.plan_type,
+            payload?.chatgpt_plan_type,
+            payload?.plan_type,
+            idPayload?.chatgpt_plan_type,
+            idPayload?.plan_type,
           );
-          const planType = firstNonEmpty(options.planType, planTypeFromJwt, "plus");
+          const planTypeOverride = firstNonEmpty(options.planType);
+          const planType = firstNonEmpty(planTypeOverride, planTypeFromJwt, "plus");
           const namePrefix = options.namePrefix != null ? options.namePrefix : "";
           const exportedAt = normalizeTimestamp(options.now || new Date());
           const computedExpiresIn =
@@ -2294,7 +2389,7 @@
           const sourceName = firstNonEmpty(options.sourceName, "pasted-json");
           const sourceType =
             record.provider === "codex" && record.authType === "oauth" ? "9router" : "chatgpt_web_session";
-          const baseName = firstNonEmpty(email, sourceName, "ChatGPT Account");
+          const baseName = firstNonEmpty(record.meta?.label, record.label, email, sourceName, "ChatGPT Account");
           const syntheticIdToken = !inputIdToken
             ? buildSyntheticCodexIdToken(email, accountId, planType, userId, expiresAt)
             : undefined;
@@ -2419,6 +2514,43 @@
             createdAt,
             updatedAt,
           });
+          const axonHubRefreshToken = refreshToken || AXONHUB_PLACEHOLDER_REFRESH_TOKEN;
+          const axonHub = stripUnavailable({
+            auth_mode: "chatgpt",
+            last_refresh: getAxonHubLastRefresh(expiresAt, options.now || new Date()),
+            tokens: {
+              access_token: accessToken,
+              refresh_token: axonHubRefreshToken,
+              id_token: idToken,
+            },
+            axonhub_refresh_token_placeholder: refreshToken ? undefined : true,
+            axonhub_note: refreshToken
+              ? undefined
+              : "refresh_token is a placeholder; access_token works only until it expires.",
+          });
+          const codexManagerTokenHints = Object.fromEntries(
+            Object.entries({
+              account_id: accountId,
+              chatgpt_account_id: chatgptAccountId,
+            }).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+          );
+          const codexManagerMeta = Object.fromEntries(
+            Object.entries({
+              label: firstNonEmpty(record.meta?.label, record.label, baseName, email, sourceName, "ChatGPT Account"),
+              workspace_id: workspaceId,
+              chatgpt_account_id: chatgptAccountId,
+              note: "Imported from ChatGPT session",
+            }).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+          );
+          const codexManager = {
+            tokens: {
+              access_token: accessToken,
+              refresh_token: refreshToken || "",
+              id_token: inputIdToken || "",
+              ...codexManagerTokenHints,
+            },
+            meta: codexManagerMeta,
+          };
 
           return {
             sourceName,
@@ -2430,6 +2562,8 @@
             cpa,
             cockpit,
             nineRouter,
+            axonHub,
+            codexManager,
             sub2apiAccount,
             codexAuth,
             hasRefreshToken: Boolean(refreshToken),
@@ -2463,6 +2597,14 @@
             return state.converted.length === 1
               ? state.converted[0].nineRouter
               : state.converted.map((i) => i.nineRouter);
+          if (state.format === "axonhub")
+            return state.converted.length === 1
+              ? state.converted[0].axonHub
+              : state.converted.map((i) => i.axonHub);
+          if (state.format === "codexmanager")
+            return state.converted.length === 1
+              ? state.converted[0].codexManager
+              : state.converted.map((i) => i.codexManager);
           return buildSub2apiDocument(state.converted, now);
         }
 
@@ -2472,6 +2614,8 @@
           if (state.format === "cpa") return item.cpa;
           if (state.format === "cockpit") return item.cockpit;
           if (state.format === "9router") return item.nineRouter;
+          if (state.format === "axonhub") return item.axonHub;
+          if (state.format === "codexmanager") return item.codexManager;
           return buildSub2apiDocument([item], now);
         }
 
@@ -3099,7 +3243,7 @@
         });
 
         elements.planTypeInput.addEventListener("input", (e) => {
-          state.planType = e.target.value.trim() || "plus";
+          state.planType = e.target.value.trim();
           if (elements.input.value.trim()) scheduleConvert();
         });
         elements.namePrefixInput.addEventListener("input", (e) => {
